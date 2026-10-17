@@ -4,7 +4,9 @@ const EARTH_RADIUS = 1.5;
 const CONTRACT_RADIUS = EARTH_RADIUS * 1.004;
 const MIN_ZOOM = 0.82;
 const MAX_ZOOM = 1.4;
-const AUTO_SPIN = 0.035; // радиан в секунду, собственное вращение системы
+const MIN_POLAR = 0.35;
+const MAX_POLAR = 2.6;
+const AUTO_SPIN = 0.035; // радиан в секунду, собственное вращение планеты
 
 function latLonToVec3(lat, lon, radius) {
   const phi = (90 - lat) * Math.PI / 180;
@@ -69,6 +71,8 @@ export function createWorld(canvas, onSelect) {
   camera.position.set(0, 1.6, 8.8);
   camera.lookAt(0, 0, 0);
   let zoomFactor = 1;
+  let azimuth = 0;
+  let polar = Math.atan2(1, 0.18);
 
   const sunDir = new THREE.Vector3(5, 2.2, 3.2).normalize();
   const sunLight = new THREE.DirectionalLight(0xfff2dd, 3.0);
@@ -98,6 +102,30 @@ export function createWorld(canvas, onSelect) {
     depthWrite: false,
   }));
   scene.add(stars);
+
+  // Видимое солнце: мировая точка, вокруг которой вращается камера.
+  const sunCanvas = document.createElement('canvas');
+  sunCanvas.width = 128;
+  sunCanvas.height = 128;
+  const sunCtx = sunCanvas.getContext('2d');
+  const sunGradient = sunCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  sunGradient.addColorStop(0, 'rgba(255, 252, 230, 1)');
+  sunGradient.addColorStop(0.18, 'rgba(255, 236, 170, 0.95)');
+  sunGradient.addColorStop(0.45, 'rgba(255, 200, 90, 0.28)');
+  sunGradient.addColorStop(1, 'rgba(255, 180, 60, 0)');
+  sunCtx.fillStyle = sunGradient;
+  sunCtx.fillRect(0, 0, 128, 128);
+  const sunTexture = new THREE.CanvasTexture(sunCanvas);
+  sunTexture.colorSpace = THREE.SRGBColorSpace;
+  const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: sunTexture,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  }));
+  sunSprite.position.copy(sunDir).multiplyScalar(30);
+  sunSprite.scale.setScalar(4.5);
+  scene.add(sunSprite);
 
   // Земля.
   const earthGroup = new THREE.Group();
@@ -333,12 +361,15 @@ export function createWorld(canvas, onSelect) {
 
     if (!dragging) {
       earthSpinGroup.rotation.y += AUTO_SPIN * dt;
-      earthGroup.rotation.y += spinY;
-      earthGroup.rotation.x = THREE.MathUtils.clamp(earthGroup.rotation.x + spinX, -1.15, 1.15);
-      spinY *= 0.94;
-      spinX *= 0.94;
-      if (Math.abs(spinY) < 0.0001) spinY = 0;
-      if (Math.abs(spinX) < 0.0001) spinX = 0;
+      if (Math.abs(spinAzimuth) > 0.0001 || Math.abs(spinPolar) > 0.0001) {
+        azimuth += spinAzimuth;
+        polar = THREE.MathUtils.clamp(polar + spinPolar, MIN_POLAR, MAX_POLAR);
+        spinAzimuth *= 0.94;
+        spinPolar *= 0.94;
+        if (Math.abs(spinAzimuth) < 0.0001) spinAzimuth = 0;
+        if (Math.abs(spinPolar) < 0.0001) spinPolar = 0;
+        applyCamera();
+      }
     }
   }
 
@@ -355,8 +386,13 @@ export function createWorld(canvas, onSelect) {
     const height = canvas.clientHeight || window.innerHeight;
     const aspect = width / height;
     const distance = baseDistance(aspect) * zoomFactor;
+    const sinPolar = Math.sin(polar);
     camera.aspect = aspect;
-    camera.position.set(0, distance * 0.18, distance);
+    camera.position.set(
+      distance * sinPolar * Math.sin(azimuth),
+      distance * Math.cos(polar),
+      distance * sinPolar * Math.cos(azimuth)
+    );
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }
@@ -374,8 +410,8 @@ export function createWorld(canvas, onSelect) {
   let moved = 0;
   let lastX = 0;
   let lastY = 0;
-  let spinX = 0;
-  let spinY = 0;
+  let spinAzimuth = 0;
+  let spinPolar = 0;
   let pinchStartDistance = 0;
   let pinchStartZoom = 1;
 
@@ -431,10 +467,11 @@ export function createWorld(canvas, onSelect) {
     lastX = e.clientX;
     lastY = e.clientY;
     moved += Math.abs(dx) + Math.abs(dy);
-    earthGroup.rotation.y += dx * 0.006;
-    earthGroup.rotation.x = THREE.MathUtils.clamp(earthGroup.rotation.x + dy * 0.006, -1.15, 1.15);
-    spinY = dx * 0.006;
-    spinX = dy * 0.006;
+    azimuth -= dx * 0.006;
+    polar = THREE.MathUtils.clamp(polar - dy * 0.006, MIN_POLAR, MAX_POLAR);
+    spinAzimuth = -dx * 0.006;
+    spinPolar = -dy * 0.006;
+    applyCamera();
     e.preventDefault();
   });
 
@@ -512,7 +549,17 @@ export function createWorld(canvas, onSelect) {
         textureLoaded: Boolean(earthTexture.image && earthTexture.image.width),
         camera: { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov },
         zoom: zoomFactor,
+        cameraOrbit: { azimuth, polar },
         planetSpin: earthSpinGroup.rotation.y,
+        hasSun: Boolean(sunSprite.parent),
+        sunScreen: (() => {
+          const v = sunSprite.position.clone().project(camera);
+          return {
+            x: Math.round((v.x * 0.5 + 0.5) * canvas.clientWidth),
+            y: Math.round((-v.y * 0.5 + 0.5) * canvas.clientHeight),
+            z: Math.round(v.z * 100) / 100,
+          };
+        })(),
         orbits: Array.from(satellites.values()).map(e => ({
           type: e.type,
           inclination: e.orbitGroup.rotation.x,
