@@ -5,7 +5,8 @@ import { UI } from './ui.js';
 const canvas = document.getElementById('scene');
 const game = new Game();
 const world = createWorld(canvas, where => game.select(where));
-const ui = new UI(game, world);
+const time = { scale: 1 };
+const ui = new UI(game, world, time);
 
 world.syncSatellites(game.state.satellites);
 world.setContract(game.state.contract);
@@ -24,7 +25,7 @@ game.subscribe(state => {
 
 let last = performance.now();
 function frame(now) {
-  const dt = Math.min((now - last) / 1000, 0.1);
+  const dt = Math.min((now - last) / 1000, 0.05) * time.scale;
   last = now;
   const sunlit = world.getSunlitMap();
   game.update(dt, sunlit);
@@ -38,4 +39,4 @@ window.addEventListener('resize', () => world.resize());
 setInterval(() => game.save(), 3000);
 
 // Для отладки и автотестов.
-window.__sputnik = { game, world, ui };
+window.__sputnik = { game, world, ui, time };

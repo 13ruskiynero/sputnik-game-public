@@ -17,11 +17,13 @@ function zoneHint(angle) {
 }
 
 export class UI {
-  constructor(game, world) {
+  constructor(game, world, time = { scale: 1 }) {
     this.game = game;
     this.world = world;
+    this.time = time;
     this._satKey = '';
     this._zoneKey = '';
+    this._devScales = new Set();
 
     const $ = id => document.getElementById(id);
     this.el = {
@@ -42,6 +44,8 @@ export class UI {
       actionHint: $('action-hint'),
       btnBuyRelay: $('btn-buy-relay'),
       btnReset: $('btn-reset'),
+      devSpeed2: $('dev-speed-2'),
+      devSpeed5: $('dev-speed-5'),
       satList: $('sat-list'),
       toasts: $('toasts'),
       panels: Array.from(document.querySelectorAll('.panel')),
@@ -63,12 +67,44 @@ export class UI {
       this.closePanels();
       this.toast('Прогресс сброшен', 'warn');
     });
+    this.bindDevSpeed(this.el.devSpeed2, 2);
+    this.bindDevSpeed(this.el.devSpeed5, 5);
+
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => {
         const panel = btn.closest('.panel');
         if (panel) panel.classList.remove('open');
       });
     });
+  }
+
+  bindDevSpeed(button, scale) {
+    if (!button) return;
+
+    const press = e => {
+      e.preventDefault();
+      this._devScales.add(scale);
+      this.time.scale = Math.max(...this._devScales);
+      button.classList.add('active');
+      if (button.setPointerCapture) {
+        try {
+          button.setPointerCapture(e.pointerId);
+        } catch (err) {
+          // Синтетические события в тестах не имеют активного указателя.
+        }
+      }
+    };
+
+    const release = () => {
+      this._devScales.delete(scale);
+      this.time.scale = this._devScales.size ? Math.max(...this._devScales) : 1;
+      button.classList.remove('active');
+    };
+
+    button.addEventListener('pointerdown', press);
+    button.addEventListener('pointerup', release);
+    button.addEventListener('pointercancel', release);
+    button.addEventListener('pointerleave', release);
   }
 
   togglePanel(id) {

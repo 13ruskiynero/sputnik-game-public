@@ -385,6 +385,56 @@ html, body {
   cursor: pointer;
 }
 
+.dev-panel {
+  position: fixed;
+  left: 14px;
+  bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  z-index: 25;
+}
+
+.dev-label {
+  margin-right: 2px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.dev-btn {
+  width: 38px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(140, 190, 255, 0.06);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.dev-btn.active {
+  border-color: rgba(89, 242, 178, 0.7);
+  color: var(--accent);
+  background: rgba(89, 242, 178, 0.16);
+  box-shadow: 0 0 14px rgba(89, 242, 178, 0.2);
+}
+
+@media (max-width: 620px) {
+  .dev-panel { left: 10px; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); padding: 5px 7px; }
+  .dev-btn { width: 34px; height: 28px; font-size: 11px; }
+}
+
 .toasts {
   position: fixed;
   left: 50%;
@@ -430,5 +480,55 @@ html, body {
   .left-stack { gap: 6px; }
   .big-btn { padding: 11px 8px; font-size: 14px; }
   .panel { right: 10px; bottom: 88px; width: calc(100vw - 20px); }
-  .toasts { bottom: 96px; }
+  .dev-panel {
+  position: fixed;
+  left: 14px;
+  bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  z-index: 25;
+}
+
+.dev-label {
+  margin-right: 2px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.dev-btn {
+  width: 38px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(140, 190, 255, 0.06);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.dev-btn.active {
+  border-color: rgba(89, 242, 178, 0.7);
+  color: var(--accent);
+  background: rgba(89, 242, 178, 0.16);
+  box-shadow: 0 0 14px rgba(89, 242, 178, 0.2);
+}
+
+@media (max-width: 620px) {
+  .dev-panel { left: 10px; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); padding: 5px 7px; }
+  .dev-btn { width: 34px; height: 28px; font-size: 11px; }
+}
+
+.toasts { bottom: 96px; }
 }
