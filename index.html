@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#04060d">
+  <title>Sputnik Game</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div id="hud">
+    <header class="topbar">
+      <button id="btn-satellites" class="hud-btn" type="button" aria-label="Спутники">
+        <span class="ico">🛰</span>
+        <span class="lbl">Спутники</span>
+      </button>
+
+      <div class="center">
+        <div id="balance" class="balance">$0</div>
+        <div class="action-meter" aria-label="Прогресс действия">
+          <div id="action-fill" class="action-fill"></div>
+        </div>
+        <div id="income" class="income">+$0.00/сек</div>
+      </div>
+
+      <button id="btn-menu" class="hud-btn icon" type="button" aria-label="Меню">☰</button>
+    </header>
+
+    <div id="contract-card" class="contract-card">
+      <div class="contract-head">
+        <span id="contract-title">Контракт</span>
+        <span id="contract-reward" class="reward">$10</span>
+      </div>
+      <div id="contract-desc" class="contract-desc">Снимите указанную область, когда спутник проходит над ней.</div>
+      <div class="contract-meta">
+        <span id="contract-shots">0/1 снимок</span>
+        <span id="contract-zone">вращайте Землю</span>
+      </div>
+    </div>
+
+    <footer class="bottombar">
+      <button id="btn-shop" class="big-btn" type="button">
+        <span class="ico">🛒</span>
+        <span>Магазин</span>
+      </button>
+      <button id="btn-action" class="big-btn action" type="button">
+        <span class="ico">📷</span>
+        <span>Действие</span>
+        <small id="action-hint">Ручная работа</small>
+      </button>
+    </footer>
+  </div>
+
+  <section id="panel-satellites" class="panel" aria-label="Спутники">
+    <div class="panel-head">
+      <h2>Спутники</h2>
+      <button class="close" type="button" data-close aria-label="Закрыть">✕</button>
+    </div>
+    <div id="sat-list" class="sat-list"></div>
+    <p class="panel-note">Энергия восстанавливается на солнечной стороне и расходуется в тени.</p>
+  </section>
+
+  <section id="panel-shop" class="panel" aria-label="Магазин">
+    <div class="panel-head">
+      <h2>Магазин</h2>
+      <button class="close" type="button" data-close aria-label="Закрыть">✕</button>
+    </div>
+    <div class="shop-list">
+      <article class="shop-card">
+        <div class="shop-ico">📡</div>
+        <div class="shop-info">
+          <h3>Спутник связи</h3>
+          <p>Пассивный доход +$0.05/сек. Работает без ручных команд.</p>
+        </div>
+        <button id="btn-buy-relay" class="buy-btn" type="button">$25</button>
+      </article>
+      <article class="shop-card muted">
+        <div class="shop-ico">🧠</div>
+        <div class="shop-info">
+          <h3>ИИ-автоматизация</h3>
+          <p>Будущее улучшение: аппарат сам выполняет рутинные действия.</p>
+        </div>
+        <button class="buy-btn" type="button" disabled>скоро</button>
+      </article>
+    </div>
+  </section>
+
+  <section id="panel-menu" class="panel" aria-label="Меню">
+    <div class="panel-head">
+      <h2>Меню</h2>
+      <button class="close" type="button" data-close aria-label="Закрыть">✕</button>
+    </div>
+    <div class="menu-body">
+      <p>Sputnik Game — прототип 0.1</p>
+      <p class="muted">Вращайте Землю мышью или пальцем. Подведите спутник к зелёной зоне контракта и нажмите «Действие».</p>
+      <button id="btn-reset" class="danger" type="button">Сбросить прогресс</button>
+    </div>
+  </section>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -22,14 +22,14 @@ RSYNC_ARGS=(
   --exclude '*.key' --exclude '*.pem'
   --exclude 'secrets*' --exclude '*_secret*' --exclude 'credentials*'
   --exclude '__pycache__' --exclude '.venv' --exclude 'venv*'
-  --exclude 'node_modules' --exclude '.godot'
+  --exclude 'node_modules' --exclude '.godot' --exclude '.stfolder' --exclude '.stignore'
   --exclude 'build' --exclude 'dist'
   --exclude '*.gguf' --exclude '*.zip' --exclude '*.tar' --exclude '*.tar.gz' --exclude '*.zst'
 )
 
 # allowlist: что вообще публикуем
 ITEMS=()
-for item in README.md docs src assets tools/sync_public.sh; do
+for item in README.md index.html styles.css docs src assets vendor tools/sync_public.sh; do
   [[ -e "$SRC/$item" ]] && ITEMS+=("$item")
 done
 

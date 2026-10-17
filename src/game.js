@@ -1,0 +1,216 @@
+// Состояние игры и экономика. Без DOM и Three.js — чистые данные и правила.
+
+export const ENERGY_MAX = 100;
+export const ACTION_ENERGY_COST = 15;
+export const CHARGE_RATE = 12;      // единиц в секунду на солнечной стороне
+export const DRAIN_RATE = 8;        // единиц в секунду в тени
+export const CLICKS_PER_DOLLAR = 5;
+export const CONTRACT_ANGLE = 0.42; // ~24 градуса
+export const RELAY_COST = 25;
+export const RELAY_INCOME = 0.05;
+
+const SAVE_KEY = 'sputnik-save-v1';
+
+function uid(prefix) {
+  return prefix + '-' + Math.random().toString(36).slice(2, 9);
+}
+
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+export class Game {
+  constructor() {
+    this.listeners = new Set();
+    this.state = this.defaultState();
+    this.load();
+  }
+
+  defaultState() {
+    return {
+      version: 1,
+      balance: 0,
+      actionClicks: 0,
+      incomePerSec: 0,
+      satellites: [
+        { id: 'mapper-1', type: 'mapper', name: 'Картограф-1', energy: 100, selected: true },
+      ],
+      selectedId: 'mapper-1',
+      contract: this.newContractData(),
+      stats: { clicks: 0, shots: 0, contracts: 0 },
+    };
+  }
+
+  newContractData() {
+    const titles = [
+      'Картографирование сектора',
+      'Съёмка побережья',
+      'Мониторинг ледовой обстановки',
+      'Обзор транспортного узла',
+    ];
+    const lat = -55 + Math.random() * 110;
+    const lon = -180 + Math.random() * 360;
+    return {
+      id: uid('contract'),
+      title: titles[Math.floor(Math.random() * titles.length)],
+      lat: Math.round(lat * 10) / 10,
+      lon: Math.round(lon * 10) / 10,
+      required: 1,
+      shots: 0,
+      reward: 10,
+    };
+  }
+
+  subscribe(fn) {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  emit() {
+    for (const fn of this.listeners) fn(this.state);
+  }
+
+  selectedSatellite() {
+    return this.state.satellites.find(s => s.id === this.state.selectedId) || null;
+  }
+
+  select(id) {
+    if (!this.state.satellites.some(s => s.id === id)) return false;
+    this.state.selectedId = id;
+    for (const s of this.state.satellites) s.selected = s.id === id;
+    this.emit();
+    this.save();
+    return true;
+  }
+
+  doAction(angleToContract = null) {
+    const sat = this.selectedSatellite();
+    if (!sat) return { ok: false, reason: 'Нет выбранного спутника' };
+    if (sat.type !== 'mapper') return { ok: false, reason: 'Этот аппарат не ведёт съёмку' };
+    if (sat.energy < ACTION_ENERGY_COST) {
+      return { ok: false, reason: 'Мало энергии — дождитесь солнечной стороны' };
+    }
+
+    sat.energy = Math.max(0, sat.energy - ACTION_ENERGY_COST);
+    this.state.stats.clicks += 1;
+    this.state.actionClicks += 1;
+
+    let earned = 0;
+    if (this.state.actionClicks >= CLICKS_PER_DOLLAR) {
+      this.state.actionClicks = 0;
+      this.state.balance += 1;
+      earned = 1;
+    }
+
+    let shot = false;
+    let contractDone = false;
+    let completed = null;
+
+    const c = this.state.contract;
+    const overZone = angleToContract !== null && angleToContract <= CONTRACT_ANGLE;
+    if (c && c.shots < c.required && overZone) {
+      shot = true;
+      c.shots += 1;
+      this.state.stats.shots += 1;
+      if (c.shots >= c.required) {
+        completed = { ...c };
+        this.state.balance += c.reward;
+        this.state.stats.contracts += 1;
+        this.state.contract = this.newContractData();
+        contractDone = true;
+      }
+    }
+
+    this.emit();
+    this.save();
+    return {
+      ok: true,
+      earned,
+      shot,
+      contractDone,
+      completed,
+      reward: completed ? completed.reward : 0,
+      satName: sat.name,
+    };
+  }
+
+  update(dt, sunlitById = {}) {
+    let changed = false;
+
+    for (const sat of this.state.satellites) {
+      const sunlit = sunlitById[sat.id] !== false;
+      const rate = sunlit ? CHARGE_RATE : -DRAIN_RATE;
+      const before = sat.energy;
+      sat.energy = clamp(sat.energy + rate * dt, 0, ENERGY_MAX);
+      if (Math.abs(sat.energy - before) > 0.02) changed = true;
+    }
+
+    if (this.state.incomePerSec > 0) {
+      this.state.balance += this.state.incomePerSec * dt;
+      changed = true;
+    }
+
+    if (changed) this.emit();
+  }
+
+  buyRelay() {
+    if (this.state.balance < RELAY_COST) {
+      return { ok: false, reason: `Нужно $${RELAY_COST}` };
+    }
+    this.state.balance -= RELAY_COST;
+    const count = this.state.satellites.filter(s => s.type === 'relay').length + 1;
+    const sat = {
+      id: uid('relay'),
+      type: 'relay',
+      name: 'Связь-' + count,
+      energy: ENERGY_MAX,
+      selected: false,
+    };
+    this.state.satellites.push(sat);
+    this.state.incomePerSec = Math.round((this.state.incomePerSec + RELAY_INCOME) * 100) / 100;
+    this.state.selectedId = sat.id;
+    for (const s of this.state.satellites) s.selected = s.id === sat.id;
+    this.emit();
+    this.save();
+    return { ok: true, sat };
+  }
+
+  reset() {
+    this.state = this.defaultState();
+    this.save();
+    this.emit();
+  }
+
+  save() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(this.state));
+      }
+    } catch (e) {
+      // сохранение не критично для игры
+    }
+  }
+
+  load() {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (!data || data.version !== 1) return;
+      if (!Array.isArray(data.satellites) || data.satellites.length === 0) return;
+      if (!data.contract) data.contract = this.newContractData();
+      this.state = Object.assign(this.defaultState(), data);
+      if (!this.state.satellites.some(s => s.id === this.state.selectedId)) {
+        this.state.selectedId = this.state.satellites[0].id;
+      }
+      for (const s of this.state.satellites) s.selected = s.id === this.state.selectedId;
+    } catch (e) {
+      // битое сохранение — начинаем заново
+    }
+  }
+
+  snapshot() {
+    return JSON.parse(JSON.stringify(this.state));
+  }
+}
