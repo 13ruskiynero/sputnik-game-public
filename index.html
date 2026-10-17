@@ -58,7 +58,10 @@
 
     <div class="bottom-stack">
       <div id="energy-hud" class="energy-hud" aria-label="Энергия выбранного спутника">
-        <span class="energy-label">Энергия</span>
+        <span class="energy-label" title="Энергия выбранного спутника">
+          <span class="energy-icon" aria-hidden="true">⚡</span>
+          <span id="energy-sat-name">Картограф-1</span>
+        </span>
         <div class="energy-bar"><i id="energy-fill"></i></div>
         <span id="energy-value" class="energy-value">100%</span>
       </div>

@@ -314,11 +314,17 @@ export function createWorld(canvas, onSelect) {
       points.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
     }
     const orbitGeom = new THREE.BufferGeometry().setFromPoints(points);
-    orbitGroup.add(new THREE.Line(orbitGeom, new THREE.LineBasicMaterial({
+    const orbitMaterial = new THREE.LineDashedMaterial({
       color: isRelay ? 0xffd479 : 0x8fd3ff,
       transparent: true,
-      opacity: 0.52,
-    })));
+      opacity: isRelay ? 0.20 : 0.26,
+      dashSize: 0.08,
+      gapSize: 0.14,
+      depthWrite: false,
+    });
+    const orbitLine = new THREE.Line(orbitGeom, orbitMaterial);
+    orbitLine.computeLineDistances();
+    orbitGroup.add(orbitLine);
 
     const mesh = buildSatelliteMesh(sat.type);
     const phase = index * 2.1 + (isRelay ? 1.1 : 0);
@@ -340,7 +346,7 @@ export function createWorld(canvas, onSelect) {
     mesh.add(ring);
 
     orbitGroup.add(mesh);
-    satellites.set(sat.id, { mesh, orbitGroup, radius, speed, phase, ring, type: sat.type });
+    satellites.set(sat.id, { mesh, orbitGroup, orbitLine, radius, speed, phase, ring, type: sat.type });
   }
 
   function syncSatellites(list) {
@@ -819,6 +825,10 @@ export function createWorld(canvas, onSelect) {
           inclination: e.orbitGroup.rotation.x,
           node: e.orbitGroup.rotation.y,
           parentIsEarth: e.orbitGroup.parent === earthGroup,
+          material: e.orbitLine.material.type,
+          opacity: e.orbitLine.material.opacity,
+          dashSize: e.orbitLine.material.dashSize,
+          gapSize: e.orbitLine.material.gapSize,
         })),
         earthRotation: [earthGroup.rotation.x, earthGroup.rotation.y],
       };

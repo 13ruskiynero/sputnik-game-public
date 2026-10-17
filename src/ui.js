@@ -30,6 +30,7 @@ export class UI {
       income: $('income'),
       energyFill: $('energy-fill'),
       energyValue: $('energy-value'),
+      energySatName: $('energy-sat-name'),
       actionFill: $('action-fill'),
       contractTitle: $('contract-title'),
       contractReward: $('contract-reward'),
@@ -200,7 +201,6 @@ export class UI {
     this.pulseAction();
     this.world.triggerObservation(sat.id);
     if (result.shot) this.toast('Снимок сделан', 'ok');
-    if (result.earned) this.toast('+$1 за ручную работу', 'money');
     if (result.contractDone) {
       this.toast('Контракт выполнен: +$' + result.reward, 'ok');
     }
@@ -244,6 +244,10 @@ export class UI {
     const energyPct = sat ? Math.round(Math.max(0, Math.min(100, sat.energy))) : 0;
     this.el.energyFill.style.width = energyPct + '%';
     this.el.energyValue.textContent = energyPct + '%';
+    if (this.el.energySatName) {
+      this.el.energySatName.textContent = sat ? sat.name : '—';
+      this.el.energySatName.title = sat ? sat.name : '';
+    }
     this.el.energyFill.classList.toggle('low', energyPct < 20);
     const angle = sat ? this.world.getAngleToContract(sat.id) : null;
     const overZone = angle !== null && angle <= CONTRACT_ANGLE;
