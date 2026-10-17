@@ -56,17 +56,25 @@
       </div>
     </div>
 
-    <footer class="bottombar">
-      <button id="btn-shop" class="big-btn" type="button">
-        <span class="ico">🛒</span>
-        <span>Магазин</span>
-      </button>
-      <button id="btn-action" class="big-btn action" type="button">
-        <span class="ico">📷</span>
-        <span>Действие</span>
-        <small id="action-hint">Ручная работа</small>
-      </button>
-    </footer>
+    <div class="bottom-stack">
+      <div id="energy-hud" class="energy-hud" aria-label="Энергия выбранного спутника">
+        <span class="energy-label">Энергия</span>
+        <div class="energy-bar"><i id="energy-fill"></i></div>
+        <span id="energy-value" class="energy-value">100%</span>
+      </div>
+
+      <footer class="bottombar">
+        <button id="btn-shop" class="big-btn" type="button">
+          <span class="ico">🛒</span>
+          <span>Магазин</span>
+        </button>
+        <button id="btn-action" class="big-btn action" type="button">
+          <span class="ico">📷</span>
+          <span>Действие</span>
+          <small id="action-hint">Ручная работа</small>
+        </button>
+      </footer>
+    </div>
   </div>
 
   <div id="dev-panel" class="dev-panel" aria-label="Режим разработчика">
@@ -82,7 +90,7 @@
       <button class="close" type="button" data-close aria-label="Закрыть">✕</button>
     </div>
     <div id="sat-list" class="sat-list"></div>
-    <p class="panel-note">Энергия восстанавливается на солнечной стороне и расходуется в тени.</p>
+    <p class="panel-note">На солнце +2/сек. У картографа в тени заряд не тратится; у связи в тени −2/сек, на солнце +2/сек.</p>
   </section>
 
   <section id="panel-shop" class="panel" aria-label="Магазин">

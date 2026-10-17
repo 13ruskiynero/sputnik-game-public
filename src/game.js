@@ -3,7 +3,8 @@
 export const ENERGY_MAX = 100;
 export const ACTION_ENERGY_COST = 2;
 export const CHARGE_RATE = 2;       // единиц в секунду на солнечной стороне
-export const DRAIN_RATE = 0;        // в тени батарея сама не разряжается
+export const DRAIN_RATE = 0;        // картограф в тени не разряжается
+export const RELAY_DRAIN_RATE = 2;  // связь в тени: расход, сбалансированный с зарядом
 export const CLICKS_PER_DOLLAR = 5;
 export const CONTRACT_ANGLE = 0.42; // ~24 градуса
 export const RELAY_COST = 25;
@@ -139,7 +140,8 @@ export class Game {
 
     for (const sat of this.state.satellites) {
       const sunlit = sunlitById[sat.id] !== false;
-      const rate = sunlit ? CHARGE_RATE : -DRAIN_RATE;
+      const drainRate = sat.type === 'relay' ? RELAY_DRAIN_RATE : DRAIN_RATE;
+      const rate = sunlit ? CHARGE_RATE : -drainRate;
       const before = sat.energy;
       sat.energy = clamp(sat.energy + rate * dt, 0, ENERGY_MAX);
       if (Math.abs(sat.energy - before) > 0.02) changed = true;

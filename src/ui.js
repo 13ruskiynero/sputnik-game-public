@@ -28,6 +28,8 @@ export class UI {
     this.el = {
       balance: $('balance'),
       income: $('income'),
+      energyFill: $('energy-fill'),
+      energyValue: $('energy-value'),
       actionFill: $('action-fill'),
       contractTitle: $('contract-title'),
       contractReward: $('contract-reward'),
@@ -239,6 +241,10 @@ export class UI {
     this.el.actionFill.style.width = fill + '%';
 
     const sat = state.satellites.find(s => s.id === state.selectedId) || state.satellites[0] || null;
+    const energyPct = sat ? Math.round(Math.max(0, Math.min(100, sat.energy))) : 0;
+    this.el.energyFill.style.width = energyPct + '%';
+    this.el.energyValue.textContent = energyPct + '%';
+    this.el.energyFill.classList.toggle('low', energyPct < 20);
     const angle = sat ? this.world.getAngleToContract(sat.id) : null;
     const overZone = angle !== null && angle <= CONTRACT_ANGLE;
 
