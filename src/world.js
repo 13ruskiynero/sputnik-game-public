@@ -106,11 +106,14 @@ export function createWorld(canvas, onSelect) {
   const earthTexture = new THREE.TextureLoader().load('./assets/textures/earth_atmos_2048.jpg');
   earthTexture.colorSpace = THREE.SRGBColorSpace;
 
+  const earthSpinGroup = new THREE.Group();
+  earthGroup.add(earthSpinGroup);
+
   const earth = new THREE.Mesh(
     new THREE.SphereGeometry(EARTH_RADIUS, 96, 96),
     new THREE.MeshStandardMaterial({ map: earthTexture, roughness: 0.92, metalness: 0.0 })
   );
-  earthGroup.add(earth);
+  earthSpinGroup.add(earth);
 
   const atmosphere = new THREE.Mesh(
     new THREE.SphereGeometry(EARTH_RADIUS * 1.025, 64, 64),
@@ -123,7 +126,7 @@ export function createWorld(canvas, onSelect) {
       depthWrite: false,
     })
   );
-  earthGroup.add(atmosphere);
+  earthSpinGroup.add(atmosphere);
 
   // Спутники.
   const satellites = new Map();
@@ -263,7 +266,7 @@ export function createWorld(canvas, onSelect) {
     beam.position.z = 0.21;
     group.add(beam);
 
-    earthGroup.add(group);
+    earthSpinGroup.add(group);
     contractMarker = group;
   }
 
@@ -274,7 +277,7 @@ export function createWorld(canvas, onSelect) {
     earthGroup.updateMatrixWorld(true);
     const satPos = new THREE.Vector3();
     entry.mesh.getWorldPosition(satPos);
-    const contractWorld = earthGroup.localToWorld(contractLocal.clone());
+    const contractWorld = earthSpinGroup.localToWorld(contractLocal.clone());
     return satPos.clone().normalize().angleTo(contractWorld.clone().normalize());
   }
 
@@ -329,7 +332,7 @@ export function createWorld(canvas, onSelect) {
     }
 
     if (!dragging) {
-      earthGroup.rotation.y += AUTO_SPIN * dt;
+      earthSpinGroup.rotation.y += AUTO_SPIN * dt;
       earthGroup.rotation.y += spinY;
       earthGroup.rotation.x = THREE.MathUtils.clamp(earthGroup.rotation.x + spinX, -1.15, 1.15);
       spinY *= 0.94;
@@ -509,6 +512,7 @@ export function createWorld(canvas, onSelect) {
         textureLoaded: Boolean(earthTexture.image && earthTexture.image.width),
         camera: { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov },
         zoom: zoomFactor,
+        planetSpin: earthSpinGroup.rotation.y,
         orbits: Array.from(satellites.values()).map(e => ({
           type: e.type,
           inclination: e.orbitGroup.rotation.x,
@@ -531,6 +535,14 @@ export function createWorld(canvas, onSelect) {
       const v = new THREE.Vector3();
       entry.mesh.getWorldPosition(v);
       earthGroup.worldToLocal(v);
+      return { x: v.x, y: v.y, z: v.z };
+    },
+    getSatelliteSpinLocalPosition(id) {
+      const entry = satellites.get(id);
+      if (!entry) return null;
+      const v = new THREE.Vector3();
+      entry.mesh.getWorldPosition(v);
+      earthSpinGroup.worldToLocal(v);
       return { x: v.x, y: v.y, z: v.z };
     },
   };
