@@ -9,6 +9,7 @@ const MAX_POLAR = 2.6;
 const AUTO_SPIN = 0.035; // радиан в секунду, собственное вращение планеты
 const MOON_RADIUS = 0.38;
 const MOON_ORBIT_SPEED = 0.02;
+const SUN_ORBIT_SPEED = 0.003; // полный оборот примерно за 35 минут
 
 function latLonToVec3(lat, lon, radius) {
   const phi = (90 - lat) * Math.PI / 180;
@@ -77,6 +78,9 @@ export function createWorld(canvas, onSelect) {
   let polar = Math.atan2(1, 0.18);
 
   const sunDir = new THREE.Vector3(5, 2.2, 3.2).normalize();
+  const sunBaseDir = sunDir.clone();
+  const sunAxis = new THREE.Vector3(0, 1, 0);
+  let sunOrbitAngle = 0;
   const sunLight = new THREE.DirectionalLight(0xfff2dd, 3.0);
   sunLight.position.copy(sunDir).multiplyScalar(20);
   scene.add(sunLight);
@@ -366,6 +370,12 @@ export function createWorld(canvas, onSelect) {
 
   function update(dt) {
     elapsed += dt;
+
+    sunOrbitAngle += SUN_ORBIT_SPEED * dt;
+    sunDir.copy(sunBaseDir).applyAxisAngle(sunAxis, sunOrbitAngle).normalize();
+    sunLight.position.copy(sunDir).multiplyScalar(20);
+    sunSprite.position.copy(sunDir).multiplyScalar(30);
+
     for (const entry of satellites.values()) {
       entry.phase += entry.speed * dt;
       entry.mesh.position.set(
@@ -605,6 +615,7 @@ export function createWorld(canvas, onSelect) {
           return { x: v.x, y: v.y, z: v.z };
         })(),
         moonAngle: Math.round(moonAngle * 1000) / 1000,
+        sunAngle: Math.round(sunOrbitAngle * 100000) / 100000,
         moonScreen: (() => {
           const v = new THREE.Vector3();
           moonMesh.getWorldPosition(v);
