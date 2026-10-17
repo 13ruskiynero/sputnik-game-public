@@ -10,6 +10,10 @@ const AUTO_SPIN = 0.035; // радиан в секунду, собственно
 const MOON_RADIUS = 0.38;
 const MOON_ORBIT_SPEED = 0.02;
 const SUN_ORBIT_SPEED = 0.003; // полный оборот примерно за 35 минут
+const ECLIPSE_IN = 5;
+const ECLIPSE_HOLD = 15;
+const ECLIPSE_OUT = 6;
+const GAME_YEAR = (Math.PI * 2) / SUN_ORBIT_SPEED;
 
 function latLonToVec3(lat, lon, radius) {
   const phi = (90 - lat) * Math.PI / 180;
@@ -77,7 +81,7 @@ export function createWorld(canvas, onSelect) {
   let azimuth = 0;
   let polar = Math.atan2(1, 0.18);
 
-  const sunDir = new THREE.Vector3(5, 2.2, 3.2).normalize();
+  const sunDir = new THREE.Vector3(5, 0, 3.2).normalize();
   const sunBaseDir = sunDir.clone();
   const sunAxis = new THREE.Vector3(0, 1, 0);
   let sunOrbitAngle = 0;
@@ -168,10 +172,12 @@ export function createWorld(canvas, onSelect) {
 
   const moonHorizontalRadius = Math.hypot(4, 25);
   let moonAngle = Math.atan2(4, 25);
-  const moonMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(MOON_RADIUS, 48, 48),
-    new THREE.MeshStandardMaterial({ map: moonTexture, roughness: 1.0, metalness: 0.0 })
-  );
+  const moonMaterial = new THREE.MeshStandardMaterial({
+    map: moonTexture,
+    roughness: 1.0,
+    metalness: 0.0,
+  });
+  const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(MOON_RADIUS, 48, 48), moonMaterial);
   moonMesh.position.set(
     moonHorizontalRadius * Math.sin(moonAngle),
     2,
@@ -180,6 +186,39 @@ export function createWorld(canvas, onSelect) {
   moonMesh.rotation.y = -moonAngle;
   moonMesh.userData.isMoon = true;
   earthGroup.add(moonMesh);
+
+  const moonDistance = Math.sqrt(moonHorizontalRadius ** 2 + 2 ** 2);
+  let nextEclipseAt = GAME_YEAR * (2 + Math.random());
+  let eclipse = null;
+  const moonWhite = new THREE.Color(0xffffff);
+  const moonRed = new THREE.Color(0x8a3a24);
+  const moonEmissive = new THREE.Color(0x2a0704);
+  const moonEmissiveOff = new THREE.Color(0x000000);
+
+  const eclipseShadowMaterial = new THREE.MeshBasicMaterial({
+    color: 0x1b2b44,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const eclipseShadow = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.15, 1.5, 28, 32, 1, true),
+    eclipseShadowMaterial
+  );
+  eclipseShadow.visible = false;
+  eclipseShadow.renderOrder = 1;
+  scene.add(eclipseShadow);
+
+  function smoothstep(t) {
+    return t * t * (3 - 2 * t);
+  }
+
+  function triggerEclipse() {
+    if (eclipse) return false;
+    eclipse = { start: elapsed, from: moonMesh.position.clone() };
+    return true;
+  }
 
   // Спутники.
   const satellites = new Map();
@@ -390,12 +429,59 @@ export function createWorld(canvas, onSelect) {
     }
 
     moonAngle += MOON_ORBIT_SPEED * dt;
-    moonMesh.position.set(
+    const orbitPos = new THREE.Vector3(
       moonHorizontalRadius * Math.sin(moonAngle),
       2,
       -moonHorizontalRadius * Math.cos(moonAngle)
     );
-    moonMesh.rotation.y = -moonAngle;
+
+    if (!eclipse && elapsed >= nextEclipseAt) triggerEclipse();
+
+    if (eclipse) {
+      const targetDir = sunDir.clone().multiplyScalar(-1).normalize();
+      const targetPos = targetDir.multiplyScalar(moonDistance);
+      const t = elapsed - eclipse.start;
+      let colorK = 1;
+      let shadowK = 1;
+
+      if (t < ECLIPSE_IN) {
+        const k = smoothstep(t / ECLIPSE_IN);
+        moonMesh.position.copy(eclipse.from).lerp(targetPos, k);
+        colorK = k;
+        shadowK = k;
+      } else if (t < ECLIPSE_IN + ECLIPSE_HOLD) {
+        moonMesh.position.copy(targetPos);
+      } else if (t < ECLIPSE_IN + ECLIPSE_HOLD + ECLIPSE_OUT) {
+        const k = smoothstep((t - ECLIPSE_IN - ECLIPSE_HOLD) / ECLIPSE_OUT);
+        moonMesh.position.copy(targetPos).lerp(orbitPos, k);
+        colorK = 1 - k;
+        shadowK = 1 - k;
+      } else {
+        eclipse = null;
+        moonMesh.position.copy(orbitPos);
+        colorK = 0;
+        shadowK = 0;
+        nextEclipseAt = elapsed + GAME_YEAR * (2 + Math.random());
+      }
+
+      moonMesh.rotation.y = -moonAngle;
+      moonMaterial.color.copy(moonWhite).lerp(moonRed, colorK);
+      moonMaterial.emissive.copy(moonEmissiveOff).lerp(moonEmissive, colorK);
+      moonMaterial.emissiveIntensity = 0.55 * colorK;
+      eclipseShadow.visible = shadowK > 0.001;
+      if (eclipseShadow.visible) {
+        eclipseShadowMaterial.opacity = 0.18 * shadowK;
+        eclipseShadow.position.copy(targetDir).multiplyScalar(14);
+        eclipseShadow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), targetDir);
+      }
+    } else {
+      moonMesh.position.copy(orbitPos);
+      moonMesh.rotation.y = -moonAngle;
+      moonMaterial.color.copy(moonWhite);
+      moonMaterial.emissive.copy(moonEmissiveOff);
+      moonMaterial.emissiveIntensity = 0;
+      eclipseShadow.visible = false;
+    }
 
     if (contractMarker) {
       contractMarker.scale.setScalar(1 + 0.10 * Math.sin(elapsed * 3));
@@ -602,6 +688,12 @@ export function createWorld(canvas, onSelect) {
     getAngleToContract,
     getSunlitMap,
     triggerObservation,
+    triggerEclipse,
+    setCameraOrbit(nextAzimuth, nextPolar) {
+      azimuth = nextAzimuth;
+      polar = THREE.MathUtils.clamp(nextPolar, MIN_POLAR, MAX_POLAR);
+      applyCamera();
+    },
     getDebug() {
       return {
         satellites: satellites.size,
@@ -616,6 +708,14 @@ export function createWorld(canvas, onSelect) {
         })(),
         moonAngle: Math.round(moonAngle * 1000) / 1000,
         sunAngle: Math.round(sunOrbitAngle * 100000) / 100000,
+        eclipseActive: Boolean(eclipse),
+        eclipsePhase: eclipse
+          ? (elapsed - eclipse.start < ECLIPSE_IN ? 'in'
+            : elapsed - eclipse.start < ECLIPSE_IN + ECLIPSE_HOLD ? 'total' : 'out')
+          : 'none',
+        eclipseColor: moonMaterial.color.getHexString(),
+        eclipseShadow: eclipseShadow.visible,
+        eclipseNextIn: Math.round(Math.max(0, nextEclipseAt - elapsed)),
         moonScreen: (() => {
           const v = new THREE.Vector3();
           moonMesh.getWorldPosition(v);

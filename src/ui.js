@@ -45,6 +45,7 @@ export class UI {
       btnReset: $('btn-reset'),
       devSpeed2: $('dev-speed-2'),
       devSpeed5: $('dev-speed-5'),
+      devEclipse: $('dev-eclipse'),
       devPanel: $('dev-panel'),
       satList: $('sat-list'),
       toasts: $('toasts'),
@@ -71,6 +72,9 @@ export class UI {
     });
     this.bindDevSpeed(this.el.devSpeed2, 2);
     this.bindDevSpeed(this.el.devSpeed5, 5);
+    if (this.el.devEclipse) {
+      this.el.devEclipse.addEventListener('click', () => this.world.triggerEclipse());
+    }
     this.bindDevPanelDrag();
     this.updateDevButtons();
 
