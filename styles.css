@@ -399,7 +399,14 @@ html, body {
   background: var(--glass);
   backdrop-filter: blur(12px);
   pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
   z-index: 25;
+}
+
+.dev-panel.dragging {
+  cursor: grabbing;
 }
 
 .dev-label {
@@ -494,7 +501,14 @@ html, body {
   background: var(--glass);
   backdrop-filter: blur(12px);
   pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
   z-index: 25;
+}
+
+.dev-panel.dragging {
+  cursor: grabbing;
 }
 
 .dev-label {

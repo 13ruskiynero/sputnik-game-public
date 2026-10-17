@@ -45,6 +45,7 @@ export class UI {
       btnReset: $('btn-reset'),
       devSpeed2: $('dev-speed-2'),
       devSpeed5: $('dev-speed-5'),
+      devPanel: $('dev-panel'),
       satList: $('sat-list'),
       toasts: $('toasts'),
       panels: Array.from(document.querySelectorAll('.panel')),
@@ -63,11 +64,14 @@ export class UI {
     this.el.btnBuyRelay.addEventListener('click', () => this.onBuyRelay());
     this.el.btnReset.addEventListener('click', () => {
       this.game.reset();
+      this.time.scale = 1;
+      this.updateDevButtons();
       this.closePanels();
       this.toast('Прогресс сброшен', 'warn');
     });
     this.bindDevSpeed(this.el.devSpeed2, 2);
     this.bindDevSpeed(this.el.devSpeed5, 5);
+    this.bindDevPanelDrag();
     this.updateDevButtons();
 
     document.querySelectorAll('[data-close]').forEach(btn => {
@@ -84,6 +88,73 @@ export class UI {
       this.time.scale = this.time.scale === scale ? 1 : scale;
       this.updateDevButtons();
     });
+  }
+
+  bindDevPanelDrag() {
+    const panel = this.el.devPanel;
+    if (!panel) return;
+
+    let drag = null;
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+    const keepInside = () => {
+      const rect = panel.getBoundingClientRect();
+      if (rect.right > window.innerWidth || rect.bottom > window.innerHeight || rect.left < 0 || rect.top < 0) {
+        panel.style.left = clamp(rect.left, 0, window.innerWidth - rect.width) + 'px';
+        panel.style.top = clamp(rect.top, 0, window.innerHeight - rect.height) + 'px';
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+      }
+    };
+
+    panel.addEventListener('pointerdown', e => {
+      if (e.target.closest('button')) return;
+      const rect = panel.getBoundingClientRect();
+      drag = {
+        id: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        left: rect.left,
+        top: rect.top,
+        moved: false,
+      };
+      panel.classList.add('dragging');
+      if (panel.setPointerCapture) {
+        try {
+          panel.setPointerCapture(e.pointerId);
+        } catch (err) {
+          // Синтетические события в тестах не имеют активного указателя.
+        }
+      }
+      e.preventDefault();
+    });
+
+    panel.addEventListener('pointermove', e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+      if (!drag.moved) return;
+
+      const rect = panel.getBoundingClientRect();
+      panel.style.left = clamp(drag.left + dx, 0, window.innerWidth - rect.width) + 'px';
+      panel.style.top = clamp(drag.top + dy, 0, window.innerHeight - rect.height) + 'px';
+      panel.style.right = 'auto';
+      panel.style.bottom = 'auto';
+      e.preventDefault();
+    });
+
+    const end = e => {
+      if (!drag || (e.pointerId !== undefined && e.pointerId !== drag.id)) return;
+      drag = null;
+      panel.classList.remove('dragging');
+    };
+
+    panel.addEventListener('pointerup', end);
+    panel.addEventListener('pointercancel', end);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    window.addEventListener('resize', keepInside);
   }
 
   updateDevButtons() {

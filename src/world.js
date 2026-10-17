@@ -8,6 +8,7 @@ const MIN_POLAR = 0.35;
 const MAX_POLAR = 2.6;
 const AUTO_SPIN = 0.035; // радиан в секунду, собственное вращение планеты
 const MOON_RADIUS = 0.38;
+const MOON_ORBIT_SPEED = 0.02;
 
 function latLonToVec3(lat, lon, radius) {
   const phi = (90 - lat) * Math.PI / 180;
@@ -161,12 +162,18 @@ export function createWorld(canvas, onSelect) {
   const moonTexture = new THREE.TextureLoader().load('./assets/textures/moon_1024.jpg');
   moonTexture.colorSpace = THREE.SRGBColorSpace;
 
+  const moonHorizontalRadius = Math.hypot(4, 25);
+  let moonAngle = Math.atan2(4, 25);
   const moonMesh = new THREE.Mesh(
     new THREE.SphereGeometry(MOON_RADIUS, 48, 48),
     new THREE.MeshStandardMaterial({ map: moonTexture, roughness: 1.0, metalness: 0.0 })
   );
-  moonMesh.position.set(4, 2, -25);
-  moonMesh.rotation.y = 0.6;
+  moonMesh.position.set(
+    moonHorizontalRadius * Math.sin(moonAngle),
+    2,
+    -moonHorizontalRadius * Math.cos(moonAngle)
+  );
+  moonMesh.rotation.y = -moonAngle;
   moonMesh.userData.isMoon = true;
   earthGroup.add(moonMesh);
 
@@ -249,6 +256,22 @@ export function createWorld(canvas, onSelect) {
   }
 
   function syncSatellites(list) {
+    const ids = new Set(list.map(s => s.id));
+
+    for (const [id, entry] of satellites) {
+      if (!ids.has(id)) {
+        if (entry.orbitGroup.parent) entry.orbitGroup.parent.remove(entry.orbitGroup);
+        entry.orbitGroup.traverse(obj => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+        satellites.delete(id);
+      }
+    }
+
     list.forEach((sat, index) => {
       if (!satellites.has(sat.id)) createSatellite(sat, index);
     });
@@ -355,6 +378,14 @@ export function createWorld(canvas, onSelect) {
         entry.ring.scale.setScalar(1 + 0.08 * Math.sin(elapsed * 4));
       }
     }
+
+    moonAngle += MOON_ORBIT_SPEED * dt;
+    moonMesh.position.set(
+      moonHorizontalRadius * Math.sin(moonAngle),
+      2,
+      -moonHorizontalRadius * Math.cos(moonAngle)
+    );
+    moonMesh.rotation.y = -moonAngle;
 
     if (contractMarker) {
       contractMarker.scale.setScalar(1 + 0.10 * Math.sin(elapsed * 3));
@@ -573,6 +604,7 @@ export function createWorld(canvas, onSelect) {
           moonMesh.getWorldPosition(v);
           return { x: v.x, y: v.y, z: v.z };
         })(),
+        moonAngle: Math.round(moonAngle * 1000) / 1000,
         moonScreen: (() => {
           const v = new THREE.Vector3();
           moonMesh.getWorldPosition(v);
