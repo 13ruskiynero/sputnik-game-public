@@ -192,8 +192,10 @@ export function createWorld(canvas, onSelect) {
   let eclipse = null;
   const moonWhite = new THREE.Color(0xffffff);
   const moonRed = new THREE.Color(0x8a3a24);
+  const moonDark = new THREE.Color(0x1a1a1a);
   const moonEmissive = new THREE.Color(0x2a0704);
   const moonEmissiveOff = new THREE.Color(0x000000);
+  let nextEclipseType = 'lunar';
 
   const eclipseShadowMaterial = new THREE.MeshBasicMaterial({
     color: 0x1b2b44,
@@ -210,13 +212,56 @@ export function createWorld(canvas, onSelect) {
   eclipseShadow.renderOrder = 1;
   scene.add(eclipseShadow);
 
+  // Солнечное затмение: пятно тени Луны на поверхности Земли.
+  const solarUmbraMaterial = new THREE.MeshBasicMaterial({
+    color: 0x05070d,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const solarPenumbraMaterial = new THREE.MeshBasicMaterial({
+    color: 0x05070d,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const solarSpotGroup = new THREE.Group();
+  const solarPenumbra = new THREE.Mesh(new THREE.CircleGeometry(0.45, 32), solarPenumbraMaterial);
+  const solarUmbra = new THREE.Mesh(new THREE.CircleGeometry(0.22, 32), solarUmbraMaterial);
+  solarPenumbra.position.z = -0.001;
+  solarSpotGroup.add(solarPenumbra);
+  solarSpotGroup.add(solarUmbra);
+  solarSpotGroup.visible = false;
+  scene.add(solarSpotGroup);
+
+  const solarConeMaterial = new THREE.MeshBasicMaterial({
+    color: 0x05070d,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const solarConeLength = moonDistance - EARTH_RADIUS;
+  const solarCone = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.5, solarConeLength, 20, 1, true),
+    solarConeMaterial
+  );
+  solarCone.visible = false;
+  scene.add(solarCone);
+
   function smoothstep(t) {
     return t * t * (3 - 2 * t);
   }
 
-  function triggerEclipse() {
+  function triggerEclipse(type = null) {
     if (eclipse) return false;
-    eclipse = { start: elapsed, from: moonMesh.position.clone() };
+    eclipse = {
+      start: elapsed,
+      from: moonMesh.position.clone(),
+      type: type || nextEclipseType,
+    };
     return true;
   }
 
@@ -438,7 +483,8 @@ export function createWorld(canvas, onSelect) {
     if (!eclipse && elapsed >= nextEclipseAt) triggerEclipse();
 
     if (eclipse) {
-      const targetDir = sunDir.clone().multiplyScalar(-1).normalize();
+      const isSolar = eclipse.type === 'solar';
+      const targetDir = sunDir.clone().multiplyScalar(isSolar ? 1 : -1).normalize();
       const targetPos = targetDir.multiplyScalar(moonDistance);
       const t = elapsed - eclipse.start;
       let colorK = 1;
@@ -457,7 +503,9 @@ export function createWorld(canvas, onSelect) {
         colorK = 1 - k;
         shadowK = 1 - k;
       } else {
+        const kind = eclipse.type;
         eclipse = null;
+        nextEclipseType = kind === 'lunar' ? 'solar' : 'lunar';
         moonMesh.position.copy(orbitPos);
         colorK = 0;
         shadowK = 0;
@@ -465,14 +513,33 @@ export function createWorld(canvas, onSelect) {
       }
 
       moonMesh.rotation.y = -moonAngle;
-      moonMaterial.color.copy(moonWhite).lerp(moonRed, colorK);
-      moonMaterial.emissive.copy(moonEmissiveOff).lerp(moonEmissive, colorK);
-      moonMaterial.emissiveIntensity = 0.55 * colorK;
-      eclipseShadow.visible = shadowK > 0.001;
+      if (isSolar) {
+        moonMaterial.color.copy(moonWhite).lerp(moonDark, colorK);
+        moonMaterial.emissive.copy(moonEmissiveOff);
+        moonMaterial.emissiveIntensity = 0;
+      } else {
+        moonMaterial.color.copy(moonWhite).lerp(moonRed, colorK);
+        moonMaterial.emissive.copy(moonEmissiveOff).lerp(moonEmissive, colorK);
+        moonMaterial.emissiveIntensity = 0.55 * colorK;
+      }
+
+      eclipseShadow.visible = !isSolar && shadowK > 0.001;
       if (eclipseShadow.visible) {
         eclipseShadowMaterial.opacity = 0.18 * shadowK;
         eclipseShadow.position.copy(targetDir).multiplyScalar(14);
         eclipseShadow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), targetDir);
+      }
+
+      solarSpotGroup.visible = isSolar && shadowK > 0.001;
+      solarCone.visible = isSolar && shadowK > 0.001;
+      if (solarSpotGroup.visible) {
+        solarSpotGroup.position.copy(sunDir).multiplyScalar(EARTH_RADIUS * 1.003);
+        solarSpotGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), sunDir);
+        solarUmbraMaterial.opacity = 0.62 * shadowK;
+        solarPenumbraMaterial.opacity = 0.20 * shadowK;
+        solarCone.position.copy(sunDir).multiplyScalar((EARTH_RADIUS + moonDistance) / 2);
+        solarCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sunDir);
+        solarConeMaterial.opacity = 0.08 * shadowK;
       }
     } else {
       moonMesh.position.copy(orbitPos);
@@ -481,6 +548,8 @@ export function createWorld(canvas, onSelect) {
       moonMaterial.emissive.copy(moonEmissiveOff);
       moonMaterial.emissiveIntensity = 0;
       eclipseShadow.visible = false;
+      solarSpotGroup.visible = false;
+      solarCone.visible = false;
     }
 
     if (contractMarker) {
@@ -709,6 +778,10 @@ export function createWorld(canvas, onSelect) {
         moonAngle: Math.round(moonAngle * 1000) / 1000,
         sunAngle: Math.round(sunOrbitAngle * 100000) / 100000,
         eclipseActive: Boolean(eclipse),
+        eclipseType: eclipse ? eclipse.type : nextEclipseType,
+        nextEclipseType,
+        solarSpot: solarSpotGroup.visible,
+        solarCone: solarCone.visible,
         eclipsePhase: eclipse
           ? (elapsed - eclipse.start < ECLIPSE_IN ? 'in'
             : elapsed - eclipse.start < ECLIPSE_IN + ECLIPSE_HOLD ? 'total' : 'out')
