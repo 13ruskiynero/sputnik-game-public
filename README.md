@@ -14,6 +14,11 @@
 - сохранение прогресса в localStorage, сброс через меню;
 - адаптивный интерфейс под телефон.
 
+## Играть
+
+- GitHub Pages: https://13ruskiynero.github.io/sputnik-game-public/
+- Локально: см. ниже.
+
 ## Запуск
 
 ```
