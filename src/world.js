@@ -162,7 +162,7 @@ export function createWorld(canvas, onSelect) {
     const orbitGroup = new THREE.Group();
     orbitGroup.rotation.x = inclination;
     orbitGroup.rotation.y = node;
-    scene.add(orbitGroup);
+    earthGroup.add(orbitGroup);
 
     const points = [];
     for (let i = 0; i <= 128; i += 1) {
@@ -439,6 +439,7 @@ export function createWorld(canvas, onSelect) {
           type: e.type,
           inclination: e.orbitGroup.rotation.x,
           node: e.orbitGroup.rotation.y,
+          parentIsEarth: e.orbitGroup.parent === earthGroup,
         })),
         earthRotation: [earthGroup.rotation.x, earthGroup.rotation.y],
       };

@@ -13,7 +13,7 @@ function zoneHint(angle) {
   const deg = angle * 180 / Math.PI;
   if (deg <= CONTRACT_ANGLE * 180 / Math.PI) return 'над зоной';
   if (deg <= 60) return 'близко';
-  return 'вращайте Землю';
+  return 'следите за орбитой';
 }
 
 export class UI {
