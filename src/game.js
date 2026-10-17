@@ -1,9 +1,9 @@
 // Состояние игры и экономика. Без DOM и Three.js — чистые данные и правила.
 
 export const ENERGY_MAX = 100;
-export const ACTION_ENERGY_COST = 15;
-export const CHARGE_RATE = 12;      // единиц в секунду на солнечной стороне
-export const DRAIN_RATE = 8;        // единиц в секунду в тени
+export const ACTION_ENERGY_COST = 5;
+export const CHARGE_RATE = 2;       // единиц в секунду на солнечной стороне
+export const DRAIN_RATE = 0;        // в тени батарея сама не разряжается
 export const CLICKS_PER_DOLLAR = 5;
 export const CONTRACT_ANGLE = 0.42; // ~24 градуса
 export const RELAY_COST = 25;
