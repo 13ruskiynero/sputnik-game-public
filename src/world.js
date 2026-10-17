@@ -2,6 +2,9 @@ import * as THREE from 'three';
 
 const EARTH_RADIUS = 1.5;
 const CONTRACT_RADIUS = EARTH_RADIUS * 1.004;
+const MIN_ZOOM = 0.82;
+const MAX_ZOOM = 1.4;
+const AUTO_SPIN = 0.035; // радиан в секунду, собственное вращение системы
 
 function latLonToVec3(lat, lon, radius) {
   const phi = (90 - lat) * Math.PI / 180;
@@ -65,6 +68,7 @@ export function createWorld(canvas, onSelect) {
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 300);
   camera.position.set(0, 1.6, 8.8);
   camera.lookAt(0, 0, 0);
+  let zoomFactor = 1;
 
   const sunDir = new THREE.Vector3(5, 2.2, 3.2).normalize();
   const sunLight = new THREE.DirectionalLight(0xfff2dd, 3.0);
@@ -325,6 +329,7 @@ export function createWorld(canvas, onSelect) {
     }
 
     if (!dragging) {
+      earthGroup.rotation.y += AUTO_SPIN * dt;
       earthGroup.rotation.y += spinY;
       earthGroup.rotation.x = THREE.MathUtils.clamp(earthGroup.rotation.x + spinX, -1.15, 1.15);
       spinY *= 0.94;
@@ -338,35 +343,85 @@ export function createWorld(canvas, onSelect) {
     renderer.render(scene, camera);
   }
 
-  function resize() {
+  function baseDistance(aspect) {
+    return aspect < 0.8 ? 12.5 : (aspect < 1.2 ? 10.5 : 8.8);
+  }
+
+  function applyCamera() {
     const width = canvas.clientWidth || window.innerWidth;
     const height = canvas.clientHeight || window.innerHeight;
-    renderer.setSize(width, height, false);
     const aspect = width / height;
-    const distance = aspect < 0.8 ? 12.5 : (aspect < 1.2 ? 10.5 : 8.8);
+    const distance = baseDistance(aspect) * zoomFactor;
     camera.aspect = aspect;
     camera.position.set(0, distance * 0.18, distance);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }
 
-  // Вращение Земли мышью и пальцем.
+  function resize() {
+    const width = canvas.clientWidth || window.innerWidth;
+    const height = canvas.clientHeight || window.innerHeight;
+    renderer.setSize(width, height, false);
+    applyCamera();
+  }
+
+  // Вращение сцены мышью и пальцем + pinch zoom.
+  const activePointers = new Map();
   let dragging = false;
   let moved = 0;
   let lastX = 0;
   let lastY = 0;
   let spinX = 0;
   let spinY = 0;
+  let pinchStartDistance = 0;
+  let pinchStartZoom = 1;
+
+  function pointerDistance() {
+    const points = Array.from(activePointers.values());
+    if (points.length < 2) return 0;
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+  }
 
   canvas.addEventListener('pointerdown', e => {
-    dragging = true;
-    moved = 0;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (canvas.setPointerCapture) {
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch (err) {
+        // Синтетические события в тестах не имеют активного указателя.
+      }
+    }
+
+    if (activePointers.size === 1) {
+      dragging = true;
+      moved = 0;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    } else if (activePointers.size === 2) {
+      dragging = false;
+      pinchStartDistance = pointerDistance();
+      pinchStartZoom = zoomFactor;
+    }
   });
 
   canvas.addEventListener('pointermove', e => {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointers.size >= 2) {
+      const distance = pointerDistance();
+      if (pinchStartDistance > 0 && distance > 0) {
+        zoomFactor = THREE.MathUtils.clamp(
+          pinchStartZoom * (pinchStartDistance / distance),
+          MIN_ZOOM,
+          MAX_ZOOM
+        );
+        applyCamera();
+      }
+      e.preventDefault();
+      return;
+    }
+
     if (!dragging) return;
     const dx = e.clientX - lastX;
     const dy = e.clientY - lastY;
@@ -380,15 +435,33 @@ export function createWorld(canvas, onSelect) {
     e.preventDefault();
   });
 
-  function endDrag(e) {
-    if (!dragging) return;
-    dragging = false;
-    if (moved < 8) pickSatellite(e.clientX, e.clientY);
+  function pointerEnd(e) {
+    const wasSingle = activePointers.size === 1;
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) pinchStartDistance = 0;
+    if (activePointers.size === 0) {
+      if (dragging && moved < 8 && wasSingle) pickSatellite(e.clientX, e.clientY);
+      dragging = false;
+    } else {
+      dragging = false;
+    }
   }
 
-  canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', () => { dragging = false; });
-  canvas.addEventListener('pointerleave', () => { dragging = false; });
+  canvas.addEventListener('pointerup', pointerEnd);
+  canvas.addEventListener('pointercancel', pointerEnd);
+  canvas.addEventListener('pointerleave', e => {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.delete(e.pointerId);
+    if (activePointers.size === 0) dragging = false;
+    if (activePointers.size < 2) pinchStartDistance = 0;
+  });
+
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const factor = Math.exp(e.deltaY * 0.0012);
+    zoomFactor = THREE.MathUtils.clamp(zoomFactor * factor, MIN_ZOOM, MAX_ZOOM);
+    applyCamera();
+  }, { passive: false });
 
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
@@ -435,6 +508,7 @@ export function createWorld(canvas, onSelect) {
         observation: observationCone.visible,
         textureLoaded: Boolean(earthTexture.image && earthTexture.image.width),
         camera: { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov },
+        zoom: zoomFactor,
         orbits: Array.from(satellites.values()).map(e => ({
           type: e.type,
           inclination: e.orbitGroup.rotation.x,
