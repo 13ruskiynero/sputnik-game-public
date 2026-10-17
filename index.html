@@ -18,32 +18,41 @@
   <canvas id="scene"></canvas>
 
   <div id="hud">
-    <header class="topbar">
-      <button id="btn-satellites" class="hud-btn" type="button" aria-label="Спутники">
-        <span class="ico">🛰</span>
-        <span class="lbl">Спутники</span>
-      </button>
-
-      <div class="center">
-        <div id="balance" class="balance">$0</div>
-        <div class="action-meter" aria-label="Прогресс действия">
-          <div id="action-fill" class="action-fill"></div>
+    <div class="top-area">
+      <header class="topbar">
+        <div class="left-stack">
+          <button id="btn-satellites" class="hud-btn" type="button" aria-label="Спутники">
+            <span class="ico">🛰</span>
+            <span class="lbl">Спутники</span>
+          </button>
+          <button id="btn-tasks" class="hud-btn" type="button" aria-label="Задания">
+            <span class="ico">🎯</span>
+            <span class="lbl">Задания</span>
+          </button>
         </div>
-        <div id="income" class="income">+$0.00/сек</div>
-      </div>
 
-      <button id="btn-menu" class="hud-btn icon" type="button" aria-label="Меню">☰</button>
-    </header>
+        <div class="center">
+          <div id="balance" class="balance">$0</div>
+          <div class="action-meter" aria-label="Прогресс действия">
+            <div id="action-fill" class="action-fill"></div>
+          </div>
+          <div id="income" class="income">+$0.00/сек</div>
+        </div>
 
-    <div id="contract-card" class="contract-card">
-      <div class="contract-head">
-        <span id="contract-title">Контракт</span>
-        <span id="contract-reward" class="reward">$10</span>
-      </div>
-      <div id="contract-desc" class="contract-desc">Снимите указанную область, когда спутник проходит над ней.</div>
-      <div class="contract-meta">
-        <span id="contract-shots">0/1 снимок</span>
-        <span id="contract-zone">вращайте Землю</span>
+        <button id="btn-menu" class="hud-btn icon" type="button" aria-label="Меню">☰</button>
+      </header>
+
+      <div id="contract-card" class="contract-card">
+        <button id="btn-close-contract" class="contract-close" type="button" aria-label="Закрыть задание">×</button>
+        <div class="contract-head">
+          <span id="contract-title">Контракт</span>
+          <span id="contract-reward" class="reward">$10</span>
+        </div>
+        <div id="contract-desc" class="contract-desc">Снимите указанную область, когда спутник проходит над ней.</div>
+        <div class="contract-meta">
+          <span id="contract-shots">0/1 снимок</span>
+          <span id="contract-zone">вращайте Землю</span>
+        </div>
       </div>
     </div>
 

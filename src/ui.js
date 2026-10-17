@@ -34,6 +34,8 @@ export class UI {
       contractZone: $('contract-zone'),
       contractCard: $('contract-card'),
       btnSatellites: $('btn-satellites'),
+      btnTasks: $('btn-tasks'),
+      btnCloseContract: $('btn-close-contract'),
       btnShop: $('btn-shop'),
       btnMenu: $('btn-menu'),
       btnAction: $('btn-action'),
@@ -50,6 +52,8 @@ export class UI {
 
   bind() {
     this.el.btnSatellites.addEventListener('click', () => this.togglePanel('panel-satellites'));
+    this.el.btnTasks.addEventListener('click', () => this.el.contractCard.classList.toggle('open'));
+    this.el.btnCloseContract.addEventListener('click', () => this.el.contractCard.classList.remove('open'));
     this.el.btnShop.addEventListener('click', () => this.togglePanel('panel-shop'));
     this.el.btnMenu.addEventListener('click', () => this.togglePanel('panel-menu'));
     this.el.btnAction.addEventListener('click', () => this.onAction());
@@ -90,6 +94,7 @@ export class UI {
     }
 
     this.pulseAction();
+    this.world.triggerObservation(sat.id);
     if (result.shot) this.toast('Снимок сделан', 'ok');
     if (result.earned) this.toast('+$1 за ручную работу', 'money');
     if (result.contractDone) {

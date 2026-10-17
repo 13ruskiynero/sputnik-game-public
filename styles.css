@@ -44,11 +44,24 @@ html, body {
   pointer-events: none;
 }
 
+.top-area {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .topbar {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: start;
   gap: 10px;
+}
+
+.left-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .hud-btn {
@@ -111,9 +124,11 @@ html, body {
 }
 
 .contract-card {
-  align-self: flex-start;
-  width: min(320px, 78vw);
-  margin-top: 8px;
+  display: none;
+  position: relative;
+  align-self: center;
+  width: min(360px, calc(100vw - 28px));
+  margin: 8px auto 0;
   padding: 11px 13px;
   border: 1px solid rgba(89, 242, 178, 0.28);
   border-radius: 16px;
@@ -122,11 +137,29 @@ html, body {
   pointer-events: auto;
 }
 
+.contract-card.open {
+  display: block;
+}
+
+.contract-close {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
 .contract-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  padding-right: 22px;
   font-size: 13px;
   font-weight: 600;
 }
@@ -393,7 +426,8 @@ html, body {
   .hud-btn.icon { font-size: 17px; }
   .balance { font-size: 24px; }
   .action-meter { width: 46vw; }
-  .contract-card { width: min(300px, 84vw); }
+  .contract-card { width: calc(100vw - 20px); max-height: 160px; overflow: auto; }
+  .left-stack { gap: 6px; }
   .big-btn { padding: 11px 8px; font-size: 14px; }
   .panel { right: 10px; bottom: 88px; width: calc(100vw - 20px); }
   .toasts { bottom: 96px; }

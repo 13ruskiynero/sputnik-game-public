@@ -50,7 +50,7 @@ function buildSatelliteMesh(type) {
     group.add(dish);
   }
 
-  group.scale.setScalar(1.15);
+  group.scale.setScalar(1.3);
   return group;
 }
 
@@ -62,8 +62,8 @@ export function createWorld(canvas, onSelect) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x04060d);
 
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 300);
-  camera.position.set(0, 1.1, 5.6);
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 300);
+  camera.position.set(0, 1.6, 8.8);
   camera.lookAt(0, 0, 0);
 
   const sunDir = new THREE.Vector3(5, 2.2, 3.2).normalize();
@@ -128,12 +128,36 @@ export function createWorld(canvas, onSelect) {
   let contractLocal = null;
   let elapsed = 0;
 
+  // Конус наблюдения: кратковременный луч от спутника к поверхности.
+  const observationMaterial = new THREE.MeshBasicMaterial({
+    color: 0x59f2b2,
+    transparent: true,
+    opacity: 0.24,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const observationCone = new THREE.Mesh(
+    new THREE.ConeGeometry(1, 1, 32, 1, true),
+    observationMaterial
+  );
+  observationCone.visible = false;
+  observationCone.renderOrder = 3;
+  scene.add(observationCone);
+  let observationUntil = 0;
+  let observationSatId = null;
+
+  function triggerObservation(satId) {
+    observationSatId = satId;
+    observationUntil = elapsed + 0.55;
+  }
+
   function createSatellite(sat, index) {
     const isRelay = sat.type === 'relay';
     const radius = isRelay ? 2.75 : 2.15;
     const speed = isRelay ? 0.12 : 0.22;
-    const inclination = isRelay ? -0.30 : 0.34;
-    const node = isRelay ? 1.2 : 0.15;
+    const inclination = isRelay ? -0.30 : Math.PI / 2;
+    const node = isRelay ? 1.2 : 0.28;
 
     const orbitGroup = new THREE.Group();
     orbitGroup.rotation.x = inclination;
@@ -149,7 +173,7 @@ export function createWorld(canvas, onSelect) {
     orbitGroup.add(new THREE.Line(orbitGeom, new THREE.LineBasicMaterial({
       color: isRelay ? 0xffd479 : 0x8fd3ff,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.52,
     })));
 
     const mesh = buildSatelliteMesh(sat.type);
@@ -279,6 +303,27 @@ export function createWorld(canvas, onSelect) {
       contractMarker.scale.setScalar(1 + 0.10 * Math.sin(elapsed * 3));
     }
 
+    if (elapsed < observationUntil && observationSatId) {
+      const entry = satellites.get(observationSatId);
+      if (entry) {
+        const satPos = new THREE.Vector3();
+        entry.mesh.getWorldPosition(satPos);
+        const distance = satPos.length();
+        const height = Math.max(0.1, distance - EARTH_RADIUS);
+        const up = satPos.clone().normalize();
+        const radius = height * Math.tan(THREE.MathUtils.degToRad(16));
+        observationCone.visible = true;
+        observationCone.position.copy(satPos).addScaledVector(up, -height / 2);
+        observationCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), up);
+        observationCone.scale.set(radius, height, radius);
+        observationMaterial.opacity = 0.24 * Math.min(1, (observationUntil - elapsed) / 0.18);
+      } else {
+        observationCone.visible = false;
+      }
+    } else {
+      observationCone.visible = false;
+    }
+
     if (!dragging) {
       earthGroup.rotation.y += spinY;
       earthGroup.rotation.x = THREE.MathUtils.clamp(earthGroup.rotation.x + spinX, -1.15, 1.15);
@@ -297,7 +342,11 @@ export function createWorld(canvas, onSelect) {
     const width = canvas.clientWidth || window.innerWidth;
     const height = canvas.clientHeight || window.innerHeight;
     renderer.setSize(width, height, false);
-    camera.aspect = width / height;
+    const aspect = width / height;
+    const distance = aspect < 0.8 ? 12.5 : (aspect < 1.2 ? 10.5 : 8.8);
+    camera.aspect = aspect;
+    camera.position.set(0, distance * 0.18, distance);
+    camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }
 
@@ -376,13 +425,21 @@ export function createWorld(canvas, onSelect) {
     setContract,
     getAngleToContract,
     getSunlitMap,
+    triggerObservation,
     getDebug() {
       return {
         satellites: satellites.size,
         calls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
         hasContract: Boolean(contractMarker),
+        observation: observationCone.visible,
         textureLoaded: Boolean(earthTexture.image && earthTexture.image.width),
+        camera: { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov },
+        orbits: Array.from(satellites.values()).map(e => ({
+          type: e.type,
+          inclination: e.orbitGroup.rotation.x,
+          node: e.orbitGroup.rotation.y,
+        })),
         earthRotation: [earthGroup.rotation.x, earthGroup.rotation.y],
       };
     },
