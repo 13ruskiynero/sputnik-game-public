@@ -23,7 +23,6 @@ export class UI {
     this.time = time;
     this._satKey = '';
     this._zoneKey = '';
-    this._devScales = new Set();
 
     const $ = id => document.getElementById(id);
     this.el = {
@@ -69,6 +68,7 @@ export class UI {
     });
     this.bindDevSpeed(this.el.devSpeed2, 2);
     this.bindDevSpeed(this.el.devSpeed5, 5);
+    this.updateDevButtons();
 
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -80,31 +80,22 @@ export class UI {
 
   bindDevSpeed(button, scale) {
     if (!button) return;
+    button.addEventListener('click', () => {
+      this.time.scale = this.time.scale === scale ? 1 : scale;
+      this.updateDevButtons();
+    });
+  }
 
-    const press = e => {
-      e.preventDefault();
-      this._devScales.add(scale);
-      this.time.scale = Math.max(...this._devScales);
-      button.classList.add('active');
-      if (button.setPointerCapture) {
-        try {
-          button.setPointerCapture(e.pointerId);
-        } catch (err) {
-          // Синтетические события в тестах не имеют активного указателя.
-        }
-      }
-    };
-
-    const release = () => {
-      this._devScales.delete(scale);
-      this.time.scale = this._devScales.size ? Math.max(...this._devScales) : 1;
-      button.classList.remove('active');
-    };
-
-    button.addEventListener('pointerdown', press);
-    button.addEventListener('pointerup', release);
-    button.addEventListener('pointercancel', release);
-    button.addEventListener('pointerleave', release);
+  updateDevButtons() {
+    const active = this.time.scale;
+    if (this.el.devSpeed2) {
+      this.el.devSpeed2.classList.toggle('active', active === 2);
+      this.el.devSpeed2.setAttribute('aria-pressed', String(active === 2));
+    }
+    if (this.el.devSpeed5) {
+      this.el.devSpeed5.classList.toggle('active', active === 5);
+      this.el.devSpeed5.setAttribute('aria-pressed', String(active === 5));
+    }
   }
 
   togglePanel(id) {

@@ -7,9 +7,7 @@ const MAX_ZOOM = 1.4;
 const MIN_POLAR = 0.35;
 const MAX_POLAR = 2.6;
 const AUTO_SPIN = 0.035; // радиан в секунду, собственное вращение планеты
-const MOON_RADIUS = 0.22;
-const MOON_ORBIT_RADIUS = 3.35;
-const MOON_ORBIT_SPEED = 0.06;
+const MOON_RADIUS = 0.38;
 
 function latLonToVec3(lat, lon, radius) {
   const phi = (90 - lat) * Math.PI / 180;
@@ -163,34 +161,14 @@ export function createWorld(canvas, onSelect) {
   const moonTexture = new THREE.TextureLoader().load('./assets/textures/moon_1024.jpg');
   moonTexture.colorSpace = THREE.SRGBColorSpace;
 
-  const moonOrbitGroup = new THREE.Group();
-  moonOrbitGroup.rotation.x = 0.35;
-  moonOrbitGroup.rotation.y = 0.9;
-  earthGroup.add(moonOrbitGroup);
-
-  const moonOrbitPoints = [];
-  for (let i = 0; i <= 128; i += 1) {
-    const a = (i / 128) * Math.PI * 2;
-    moonOrbitPoints.push(new THREE.Vector3(
-      Math.cos(a) * MOON_ORBIT_RADIUS,
-      0,
-      Math.sin(a) * MOON_ORBIT_RADIUS
-    ));
-  }
-  const moonOrbitLine = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints(moonOrbitPoints),
-    new THREE.LineBasicMaterial({ color: 0x9aa7b8, transparent: true, opacity: 0.22 })
-  );
-  moonOrbitGroup.add(moonOrbitLine);
-
   const moonMesh = new THREE.Mesh(
     new THREE.SphereGeometry(MOON_RADIUS, 48, 48),
     new THREE.MeshStandardMaterial({ map: moonTexture, roughness: 1.0, metalness: 0.0 })
   );
-  moonMesh.position.set(MOON_ORBIT_RADIUS, 0, 0);
+  moonMesh.position.set(4, 2, -25);
+  moonMesh.rotation.y = 0.6;
   moonMesh.userData.isMoon = true;
-  moonOrbitGroup.add(moonMesh);
-  let moonPhase = 0;
+  earthGroup.add(moonMesh);
 
   // Спутники.
   const satellites = new Map();
@@ -377,14 +355,6 @@ export function createWorld(canvas, onSelect) {
         entry.ring.scale.setScalar(1 + 0.08 * Math.sin(elapsed * 4));
       }
     }
-
-    moonPhase += MOON_ORBIT_SPEED * dt;
-    moonMesh.position.set(
-      Math.cos(moonPhase) * MOON_ORBIT_RADIUS,
-      0,
-      Math.sin(moonPhase) * MOON_ORBIT_RADIUS
-    );
-    moonMesh.rotation.y = -moonPhase;
 
     if (contractMarker) {
       contractMarker.scale.setScalar(1 + 0.10 * Math.sin(elapsed * 3));
@@ -602,6 +572,16 @@ export function createWorld(canvas, onSelect) {
           const v = new THREE.Vector3();
           moonMesh.getWorldPosition(v);
           return { x: v.x, y: v.y, z: v.z };
+        })(),
+        moonScreen: (() => {
+          const v = new THREE.Vector3();
+          moonMesh.getWorldPosition(v);
+          v.project(camera);
+          return {
+            x: Math.round((v.x * 0.5 + 0.5) * canvas.clientWidth),
+            y: Math.round((-v.y * 0.5 + 0.5) * canvas.clientHeight),
+            z: Math.round(v.z * 100) / 100,
+          };
         })(),
         observation: observationCone.visible,
         textureLoaded: Boolean(earthTexture.image && earthTexture.image.width),
