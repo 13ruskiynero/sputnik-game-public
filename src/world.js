@@ -391,6 +391,9 @@ function buildSatelliteMesh(type) {
 
   group.scale.setScalar(1.3);
   group.userData.modelType = type;
+  group.userData.workingAxis = isRelay
+    ? new THREE.Vector3(0, -1, 0)
+    : new THREE.Vector3(0, 0, 1);
   return group;
 }
 
@@ -615,6 +618,16 @@ export function createWorld(canvas, onSelect) {
       solarTargetQuaternion.setFromUnitVectors(solarUp, solarPanelDirection);
       panel.quaternion.copy(solarTargetQuaternion);
     }
+  }
+
+  const satelliteNadir = new THREE.Vector3();
+
+  function orientSatelliteToEarth(mesh) {
+    const workingAxis = mesh.userData.workingAxis || new THREE.Vector3(0, 0, 1);
+    // Орбитальная группа центрирована на Земле, поэтому направление
+    // к планете — это минус локальная позиция аппарата.
+    satelliteNadir.copy(mesh.position).negate().normalize();
+    mesh.quaternion.setFromUnitVectors(workingAxis, satelliteNadir);
   }
 
   // Земля.
@@ -1023,6 +1036,7 @@ export function createWorld(canvas, onSelect) {
         0,
         Math.sin(entry.phase) * entry.radius
       );
+      orientSatelliteToEarth(entry.mesh);
       aimSolarPanels(entry.mesh);
       if (entry.ring.visible) {
         entry.ring.lookAt(camera.position);
@@ -1364,6 +1378,23 @@ export function createWorld(canvas, onSelect) {
           const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
           result.push({ id, dot: normal.dot(sunDir) });
         }
+      }
+      return result;
+    },
+    getSatelliteWorkingDirections() {
+      const result = [];
+      const earthWorld = new THREE.Vector3();
+      earthGroup.getWorldPosition(earthWorld);
+      for (const [id, entry] of satellites) {
+        const quaternion = new THREE.Quaternion();
+        entry.mesh.getWorldQuaternion(quaternion);
+        const axis = (entry.mesh.userData.workingAxis || new THREE.Vector3(0, 0, 1))
+          .clone()
+          .applyQuaternion(quaternion);
+        const position = new THREE.Vector3();
+        entry.mesh.getWorldPosition(position);
+        const toEarth = earthWorld.clone().sub(position).normalize();
+        result.push({ id, dot: axis.dot(toEarth) });
       }
       return result;
     },
