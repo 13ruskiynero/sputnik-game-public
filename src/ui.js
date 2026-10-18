@@ -475,7 +475,6 @@ export class UI {
       this.el.satSheet.classList.remove('focus-mode');
       this.el.satSheet.classList.remove('collapsed');
     }
-    if (this.el.satCompact) this.el.satCompact.hidden = true;
     this.world.focusEarth();
   }
 
@@ -549,14 +548,12 @@ export class UI {
   collapseSatSheet() {
     if (!this.el.satSheet || this.el.satSheet.hidden) return;
     this.el.satSheet.classList.add('collapsed');
-    if (this.el.satCompact) this.el.satCompact.hidden = false;
     this.el.satSheet.scrollTop = 0;
   }
 
   expandSatSheet() {
     if (!this.el.satSheet) return;
     this.el.satSheet.classList.remove('collapsed');
-    if (this.el.satCompact) this.el.satCompact.hidden = true;
   }
 
   nextSatellite() {
@@ -576,7 +573,6 @@ export class UI {
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
-    if (this.el.satCompact) this.el.satCompact.hidden = false;
 
     this.game.select(next.id);
     this.renderSatDetail(next.id);
@@ -601,7 +597,6 @@ export class UI {
       this.el.satSheet.classList.toggle('focus-mode', options.focus !== false);
       this.el.satSheet.classList.remove('collapsed');
     }
-    if (this.el.satCompact) this.el.satCompact.hidden = true;
     this.el.satSheet.hidden = false;
     this.renderSatDetail(id);
     if (options.focus !== false) this.world.focusSatellite(id);

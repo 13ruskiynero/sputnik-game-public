@@ -328,6 +328,8 @@ function buildSatelliteMesh(type) {
   // Одно сопло двигателя на стороне, противоположной рабочей:
   // у картографа сзади (−Z), у связи сзади относительно тарелки (+Z).
   const engineZ = isRelay ? 0.16 : -0.16;
+  const engineMaterial = mats.dark.clone();
+  engineMaterial.side = THREE.DoubleSide;
   const engine = new THREE.Mesh(
     new THREE.CylinderGeometry(
       isRelay ? 0.045 : 0.025,
@@ -337,7 +339,7 @@ function buildSatelliteMesh(type) {
       1,
       true
     ),
-    mats.dark
+    engineMaterial
   );
   engine.rotation.x = Math.PI / 2;
   engine.position.z = engineZ;

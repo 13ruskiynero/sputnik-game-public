@@ -618,6 +618,12 @@ html, body {
   backdrop-filter: blur(18px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   pointer-events: auto;
+  transition:
+    height 0.24s cubic-bezier(0.2, 0.7, 0.3, 1),
+    max-height 0.24s cubic-bezier(0.2, 0.7, 0.3, 1),
+    padding 0.24s cubic-bezier(0.2, 0.7, 0.3, 1),
+    background-color 0.2s ease,
+    backdrop-filter 0.2s ease;
   z-index: 18;
 }
 
@@ -661,21 +667,43 @@ html, body {
 
 .sat-sheet.collapsed .sat-detail,
 .sat-sheet.collapsed .instrument-detail,
-.sat-sheet.collapsed .orbit-editor,
+.sat-sheet.collapsed .orbit-editor {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sat-detail,
+.instrument-detail,
+.orbit-editor {
+  transition: opacity 0.16s ease;
+}
+
 .sat-sheet.collapsed .sheet-close,
 .sat-sheet.collapsed .sheet-handle {
   display: none;
 }
 
 .sat-compact {
-  display: none;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 8px;
+  bottom: 8px;
+  display: flex;
   align-items: center;
   gap: 8px;
-  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.24s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 .sat-sheet.collapsed .sat-compact {
-  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
 }
 
 .sat-compact[hidden] {
@@ -1167,7 +1195,7 @@ html, body {
     padding: 12px;
   }
   .sat-sheet.collapsed { height: 58px; max-height: 58px; padding: 7px 9px; }
-  .sat-compact { gap: 6px; }
+  .sat-compact { left: 9px; right: 9px; top: 6px; bottom: 6px; gap: 6px; }
   .compact-expand { height: 28px; padding: 0 8px; }
   .compact-grip { width: 42px; }
   .compact-btn { width: 28px; height: 28px; font-size: 14px; }
@@ -1328,7 +1356,7 @@ html, body {
     padding: 12px;
   }
   .sat-sheet.collapsed { height: 58px; max-height: 58px; padding: 7px 9px; }
-  .sat-compact { gap: 6px; }
+  .sat-compact { left: 9px; right: 9px; top: 6px; bottom: 6px; gap: 6px; }
   .compact-expand { height: 28px; padding: 0 8px; }
   .compact-grip { width: 42px; }
   .compact-btn { width: 28px; height: 28px; font-size: 14px; }
