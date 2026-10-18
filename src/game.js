@@ -13,9 +13,19 @@ export const RELAY_INCOME = 0.05;
 export const EARTH_RADIUS_KM = 6371;
 
 export const RECOMMENDED_ORBITS = {
-  mapper: { altitudeKm: 550, inclinationDeg: 90 },
-  relay: { altitudeKm: 35786, inclinationDeg: 0 },
+  mapper: { altitudeKm: 550, inclinationDeg: 90, longitudeDeg: 0 },
+  relay: { altitudeKm: 35786, inclinationDeg: 0, longitudeDeg: 45 },
 };
+
+// Регион для связи — это долгота подспутниковой точки на экваторе.
+// Названия нужны для выбора и подсказки о зоне покрытия.
+export const RELAY_REGIONS = [
+  { id: 'america', name: 'Америка', longitudeDeg: -75, coverage: 'Северная и Южная Америка' },
+  { id: 'atlantic', name: 'Атлантика и Африка', longitudeDeg: 15, coverage: 'Западная Африка, Атлантика' },
+  { id: 'indian', name: 'Индийский океан', longitudeDeg: 45, coverage: 'Мадагаскар, Восточная Африка, Индия' },
+  { id: 'asia', name: 'Азия', longitudeDeg: 105, coverage: 'Юго-Восточная Азия, Австралия' },
+  { id: 'pacific', name: 'Тихий океан', longitudeDeg: 180, coverage: 'Тихий океан, Новая Зеландия' },
+];
 
 export const SATELLITE_SPECS = {
   mapper: {
@@ -48,7 +58,7 @@ export const SATELLITE_SPECS = {
       power: '—',
       note: 'Принимает и передаёт данные между аппаратами и наземными станциями.',
     },
-    note: 'Передаёт данные и приносит пассивный доход +$0.05/сек. На рекомендованной орбите 35 786 км / 0° висит над одной точкой экватора. В тени расходует заряд.',
+    note: 'Передаёт данные и приносит пассивный доход +$0.05/сек. На рекомендованной орбите 35 786 км / 0° висит над одной точкой экватора; регион выбирается при покупке. В тени расходует заряд.',
   },
 };
 
@@ -226,6 +236,7 @@ export class Game {
     sat.orbit = {
       altitudeKm: Math.round(clamp(Number(orbit.altitudeKm) || 0, 300, 40000)),
       inclinationDeg: Math.round(clamp(Number(orbit.inclinationDeg) || 0, 0, 180)),
+      longitudeDeg: Math.round(clamp(Number(orbit.longitudeDeg) || 0, -180, 180)),
     };
     this.emit();
     this.save();
@@ -265,6 +276,8 @@ export class Game {
         s.selected = s.id === this.state.selectedId;
         if (!s.orbit) {
           s.orbit = { ...(RECOMMENDED_ORBITS[s.type] || RECOMMENDED_ORBITS.mapper) };
+        } else if (!Number.isFinite(s.orbit.longitudeDeg)) {
+          s.orbit.longitudeDeg = (RECOMMENDED_ORBITS[s.type] || RECOMMENDED_ORBITS.mapper).longitudeDeg;
         }
       }
     } catch (e) {

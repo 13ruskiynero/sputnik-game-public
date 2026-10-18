@@ -221,6 +221,15 @@
         </div>
       </div>
 
+      <div id="orbit-region-block" class="orbit-region" hidden>
+        <div class="orbit-row">
+          <span>Регион</span>
+          <strong id="orbit-region-value">Индийский океан</strong>
+        </div>
+        <div id="orbit-region-chips" class="region-chips"></div>
+        <div id="orbit-region-coverage" class="orbit-recommend">Покрытие: Мадагаскар, Восточная Африка, Индия</div>
+      </div>
+
       <div class="orbit-control">
         <div class="orbit-row">
           <label for="orbit-altitude">Высота</label>
@@ -237,6 +246,15 @@
         </div>
         <input id="orbit-inclination" type="range" min="0" max="180" step="1" value="90">
         <div class="orbit-recommend">Рекомендуемое: <span id="orbit-inclination-recommended">90°</span></div>
+      </div>
+
+      <div id="orbit-longitude-control" class="orbit-control" hidden>
+        <div class="orbit-row">
+          <label for="orbit-longitude">Долгота</label>
+          <strong id="orbit-longitude-value">45° в.д.</strong>
+        </div>
+        <input id="orbit-longitude" type="range" min="-180" max="180" step="1" value="45">
+        <div class="orbit-recommend">Рекомендуемая: <span id="orbit-longitude-recommended">45° в.д.</span></div>
       </div>
 
       <div class="orbit-actions">

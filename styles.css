@@ -525,6 +525,48 @@ html, body {
   background: rgba(140, 190, 255, 0.04);
 }
 
+.orbit-region {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(89, 242, 178, 0.3);
+  border-radius: 12px;
+  background: rgba(89, 242, 178, 0.06);
+}
+
+.orbit-region[hidden],
+#orbit-longitude-control[hidden] {
+  display: none;
+}
+
+.region-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 5px;
+}
+
+.region-chip {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(140, 190, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.region-chip.active {
+  border-color: rgba(89, 242, 178, 0.7);
+  background: rgba(89, 242, 178, 0.16);
+  color: var(--accent);
+}
+
+.sat-sheet.orbit-mode .region-chip {
+  background-color: rgba(5, 10, 20, 0.52);
+}
+
 .orbit-row {
   display: flex;
   align-items: baseline;
@@ -553,10 +595,16 @@ html, body {
 }
 
 .orbit-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
+  padding: 9px 0 3px;
+  border-top: 1px solid var(--line);
+  background: rgba(5, 10, 20, 0.88);
 }
 
 .orbit-actions .buy-btn,

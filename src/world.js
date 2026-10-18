@@ -52,6 +52,7 @@ function orbitForSatellite(sat) {
   return {
     altitudeKm: Number.isFinite(orbit.altitudeKm) ? orbit.altitudeKm : recommended.altitudeKm,
     inclinationDeg: Number.isFinite(orbit.inclinationDeg) ? orbit.inclinationDeg : recommended.inclinationDeg,
+    longitudeDeg: Number.isFinite(orbit.longitudeDeg) ? orbit.longitudeDeg : (recommended.longitudeDeg || 0),
   };
 }
 
@@ -384,7 +385,9 @@ export function createWorld(canvas, onSelect) {
 
     const mesh = buildSatelliteMesh(sat.type);
     mesh.scale.setScalar(1.3 * Math.max(1, radius / LEO_REF_RADIUS));
-    const phase = index * 2.1 + (isRelay ? 1.1 : 0);
+    const phase = isRelay
+      ? -earthSpinGroup.rotation.y - THREE.MathUtils.degToRad(orbit.longitudeDeg)
+      : index * 2.1;
     mesh.position.set(Math.cos(phase) * radius, 0, Math.sin(phase) * radius);
     mesh.userData.satId = sat.id;
 
@@ -403,7 +406,7 @@ export function createWorld(canvas, onSelect) {
     mesh.add(ring);
 
     orbitGroup.add(mesh);
-    satellites.set(sat.id, { mesh, orbitGroup, orbitLine, radius, speed, phase, ring, type: sat.type, altitudeKm: orbit.altitudeKm });
+    satellites.set(sat.id, { mesh, orbitGroup, orbitLine, radius, speed, phase, ring, type: sat.type, altitudeKm: orbit.altitudeKm, longitudeDeg: orbit.longitudeDeg });
   }
 
   function updateSatelliteOrbit(id, orbit) {
@@ -411,12 +414,17 @@ export function createWorld(canvas, onSelect) {
     if (!entry || !orbit) return false;
     const altitude = Math.max(ORBIT_MIN_KM, Math.min(ORBIT_MAX_KM, Number(orbit.altitudeKm) || LEO_REF_KM));
     const inclination = Math.max(0, Math.min(180, Number(orbit.inclinationDeg) || 0));
+    const longitude = Math.max(-180, Math.min(180, Number(orbit.longitudeDeg) || 0));
     const radius = visualRadiusForAltitude(altitude);
     const speed = angularSpeedForOrbit(altitude, radius);
 
     entry.radius = radius;
     entry.speed = speed;
     entry.altitudeKm = altitude;
+    entry.longitudeDeg = longitude;
+    if (entry.type === 'relay') {
+      entry.phase = -earthSpinGroup.rotation.y - THREE.MathUtils.degToRad(longitude);
+    }
     entry.orbitGroup.rotation.x = THREE.MathUtils.degToRad(inclination);
     entry.orbitGroup.rotation.y = entry.type === 'relay' ? 0 : 0.28;
 
@@ -980,6 +988,7 @@ export function createWorld(canvas, onSelect) {
         distance: entry.radius,
         altitude: entry.radius - EARTH_RADIUS,
         altitudeKm: entry.altitudeKm,
+        longitudeDeg: entry.longitudeDeg,
         periodSec: (Math.PI * 2) / Math.abs(entry.speed),
         speed: entry.speed,
         angularSpeed: entry.speed,

@@ -1,4 +1,4 @@
-import { ACTION_ENERGY_COST, CLICKS_PER_DOLLAR, CONTRACT_ANGLE, EARTH_RADIUS_KM, RELAY_COST, SATELLITE_SPECS } from './game.js';
+import { ACTION_ENERGY_COST, CLICKS_PER_DOLLAR, CONTRACT_ANGLE, EARTH_RADIUS_KM, RELAY_COST, SATELLITE_SPECS, RELAY_REGIONS } from './game.js';
 
 function formatMoney(value) {
   if (!Number.isFinite(value)) return '$0';
@@ -20,12 +20,23 @@ function orbitOf(sat) {
   const recommended = SATELLITE_SPECS[sat.type]?.recommendedOrbit || {
     altitudeKm: 550,
     inclinationDeg: 90,
+    longitudeDeg: 0,
   };
   const orbit = sat.orbit || recommended;
   return {
     altitudeKm: Number.isFinite(orbit.altitudeKm) ? orbit.altitudeKm : recommended.altitudeKm,
     inclinationDeg: Number.isFinite(orbit.inclinationDeg) ? orbit.inclinationDeg : recommended.inclinationDeg,
+    longitudeDeg: Number.isFinite(orbit.longitudeDeg) ? orbit.longitudeDeg : (recommended.longitudeDeg || 0),
   };
+}
+
+function formatLongitude(deg) {
+  let value = Math.round(Number(deg) || 0);
+  while (value > 180) value -= 360;
+  while (value < -180) value += 360;
+  if (value === 0) return '0°';
+  if (Math.abs(value) === 180) return '180°';
+  return Math.abs(value) + '° ' + (value > 0 ? 'в.д.' : 'з.д.');
 }
 
 function orbitLabelFor(orbit) {
@@ -97,6 +108,14 @@ export class UI {
       orbitInclinationValue: $('orbit-inclination-value'),
       orbitAltitudeRecommended: $('orbit-altitude-recommended'),
       orbitInclinationRecommended: $('orbit-inclination-recommended'),
+      orbitRegionBlock: $('orbit-region-block'),
+      orbitRegionValue: $('orbit-region-value'),
+      orbitRegionChips: $('orbit-region-chips'),
+      orbitRegionCoverage: $('orbit-region-coverage'),
+      orbitLongitudeControl: $('orbit-longitude-control'),
+      orbitLongitude: $('orbit-longitude'),
+      orbitLongitudeValue: $('orbit-longitude-value'),
+      orbitLongitudeRecommended: $('orbit-longitude-recommended'),
       btnOrbitBack: $('btn-orbit-back'),
       btnOrbitRecommended: $('btn-orbit-recommended'),
       btnOrbitApply: $('btn-orbit-apply'),
@@ -166,6 +185,7 @@ export class UI {
     if (this.el.btnOrbitApply) this.el.btnOrbitApply.addEventListener('click', () => this.applyOrbitEdit());
     if (this.el.orbitAltitude) this.el.orbitAltitude.addEventListener('input', () => this.onOrbitInput());
     if (this.el.orbitInclination) this.el.orbitInclination.addEventListener('input', () => this.onOrbitInput());
+    if (this.el.orbitLongitude) this.el.orbitLongitude.addEventListener('input', () => this.onOrbitInput());
     this.el.btnTasks.addEventListener('click', () => this.el.contractCard.classList.toggle('open'));
     this.el.btnCloseContract.addEventListener('click', () => this.el.contractCard.classList.remove('open'));
     this.el.btnShop.addEventListener('click', () => this.togglePanel('panel-shop'));
@@ -372,8 +392,11 @@ export class UI {
     this.el.satDetailEnergyFill.classList.toggle('low', energy < 20);
     this.el.satDetailWork.textContent = spec.role || '—';
     this.el.satDetailInstrument.textContent = instrument.name || '—';
-    this.el.satDetailOrbit.textContent =
-      [orbitLabel, inclination].filter(Boolean).join(' · ');
+    const orbitParts = [orbitLabel, inclination].filter(Boolean);
+    if (Math.abs(altitudeKm - GEO_ALTITUDE_KM) <= 50) {
+      orbitParts.push(formatLongitude(orbit.longitudeDeg));
+    }
+    this.el.satDetailOrbit.textContent = orbitParts.join(' · ');
     this.el.satDetailAltitude.textContent =
       altitudeKm.toLocaleString('ru-RU') + ' км над поверхностью';
     this.el.satDetailPeriod.textContent = periodText;
@@ -415,8 +438,10 @@ export class UI {
     if (!sat || !this.el.orbitEditor) return;
     const original = orbitOf(sat);
     const recommended = this.recommendedOrbit(sat);
+    const isRelay = sat.type === 'relay';
     this._orbitEdit = {
       id: sat.id,
+      regionId: null,
       original: { ...original },
       draft: { ...original },
       recommended: { ...recommended },
@@ -427,6 +452,12 @@ export class UI {
       recommended.altitudeKm.toLocaleString('ru-RU') + ' км';
     this.el.orbitInclinationRecommended.textContent =
       recommended.inclinationDeg + '°';
+    if (this.el.orbitRegionBlock) this.el.orbitRegionBlock.hidden = !isRelay;
+    if (this.el.orbitLongitudeControl) this.el.orbitLongitudeControl.hidden = !isRelay;
+    if (this.el.orbitLongitudeRecommended) {
+      this.el.orbitLongitudeRecommended.textContent = formatLongitude(recommended.longitudeDeg);
+    }
+    this.renderOrbitRegions();
     this.setOrbitControls(original);
     if (this.el.satDetail) this.el.satDetail.hidden = true;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
@@ -436,10 +467,45 @@ export class UI {
     this.world.zoomToOrbit(this.world.getVisualRadius(recommended.altitudeKm));
   }
 
+  renderOrbitRegions() {
+    if (!this.el.orbitRegionChips) return;
+    this.el.orbitRegionChips.innerHTML = '';
+    const sat = this.game.state.satellites.find(s => s.id === this._orbitEdit?.id);
+    if (!sat || sat.type !== 'relay') return;
+    for (const region of RELAY_REGIONS) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'region-chip';
+      button.dataset.regionId = region.id;
+      button.textContent = region.name;
+      button.title = 'Покрытие: ' + region.coverage;
+      button.addEventListener('click', () => this.selectOrbitRegion(region.id));
+      this.el.orbitRegionChips.appendChild(button);
+    }
+  }
+
+  selectOrbitRegion(regionId) {
+    const edit = this._orbitEdit;
+    const region = RELAY_REGIONS.find(r => r.id === regionId);
+    if (!edit || !region) return;
+    edit.regionId = region.id;
+    edit.draft = {
+      altitudeKm: edit.recommended.altitudeKm,
+      inclinationDeg: edit.recommended.inclinationDeg,
+      longitudeDeg: region.longitudeDeg,
+    };
+    this.setOrbitControls(edit.draft);
+    this.world.updateSatelliteOrbit(edit.id, edit.draft);
+    this.world.zoomToOrbit(this.world.getVisualRadius(edit.draft.altitudeKm));
+  }
+
   setOrbitControls(orbit) {
     if (!this.el.orbitAltitude || !this.el.orbitInclination) return;
     this.el.orbitAltitude.value = String(orbit.altitudeKm);
     this.el.orbitInclination.value = String(orbit.inclinationDeg);
+    if (this.el.orbitLongitude && Number.isFinite(orbit.longitudeDeg)) {
+      this.el.orbitLongitude.value = String(orbit.longitudeDeg);
+    }
     this.updateOrbitLabels();
   }
 
@@ -447,10 +513,46 @@ export class UI {
     if (!this.el.orbitAltitude || !this.el.orbitInclination) return;
     const altitudeKm = Number(this.el.orbitAltitude.value);
     const inclinationDeg = Number(this.el.orbitInclination.value);
+    const longitudeDeg = this.el.orbitLongitude ? Number(this.el.orbitLongitude.value) : 0;
     this.el.orbitAltitudeValue.textContent = altitudeKm.toLocaleString('ru-RU') + ' км';
     this.el.orbitInclinationValue.textContent = inclinationDeg + '°';
+    if (this.el.orbitLongitudeValue) {
+      this.el.orbitLongitudeValue.textContent = formatLongitude(longitudeDeg);
+    }
     const sat = this.game.state.satellites.find(s => s.id === this._orbitEdit?.id);
     this.el.orbitSubtitle.textContent = sat ? sat.name : '';
+    this.updateOrbitRegions();
+  }
+
+  updateOrbitRegions() {
+    const edit = this._orbitEdit;
+    if (!edit || !this.el.orbitRegionChips) return;
+    let active = null;
+    if (this.el.orbitRegionBlock && !this.el.orbitRegionBlock.hidden) {
+      const altitude = Number(this.el.orbitAltitude.value);
+      const inclination = Number(this.el.orbitInclination.value);
+      const longitude = this.el.orbitLongitude ? Number(this.el.orbitLongitude.value) : 0;
+      active = RELAY_REGIONS.find(region => (
+        Math.abs(region.longitudeDeg - longitude) <= 0.5
+        && Math.abs(altitude - edit.recommended.altitudeKm) <= 1
+        && Math.abs(inclination - edit.recommended.inclinationDeg) <= 0.5
+      )) || null;
+    }
+    edit.regionId = active ? active.id : null;
+    if (this.el.orbitRegionValue) {
+      this.el.orbitRegionValue.textContent = active ? active.name : 'Вручную';
+    }
+    if (this.el.orbitRegionCoverage) {
+      this.el.orbitRegionCoverage.textContent = active
+        ? 'Покрытие: ' + active.coverage
+        : 'Свободная долгота: выберите регион или настройте ползунки';
+    }
+    if (active && this.el.orbitLongitudeRecommended) {
+      this.el.orbitLongitudeRecommended.textContent = formatLongitude(active.longitudeDeg);
+    }
+    this.el.orbitRegionChips.querySelectorAll('[data-region-id]').forEach(button => {
+      button.classList.toggle('active', Boolean(active) && button.dataset.regionId === active.id);
+    });
   }
 
   onOrbitInput() {
@@ -458,6 +560,7 @@ export class UI {
     if (!edit || !this.el.orbitAltitude) return;
     let altitudeKm = Number(this.el.orbitAltitude.value);
     let inclinationDeg = Number(this.el.orbitInclination.value);
+    const longitudeDeg = this.el.orbitLongitude ? Number(this.el.orbitLongitude.value) : 0;
 
     const snapAltitude = Math.max(50, edit.recommended.altitudeKm * 0.02);
     if (Math.abs(altitudeKm - edit.recommended.altitudeKm) <= snapAltitude) {
@@ -469,7 +572,7 @@ export class UI {
       this.el.orbitInclination.value = String(inclinationDeg);
     }
 
-    edit.draft = { altitudeKm, inclinationDeg };
+    edit.draft = { altitudeKm, inclinationDeg, longitudeDeg };
     this.updateOrbitLabels();
     this.world.updateSatelliteOrbit(edit.id, edit.draft);
     this.world.zoomToOrbit(this.world.getVisualRadius(altitudeKm));
@@ -478,7 +581,11 @@ export class UI {
   resetOrbitToRecommended() {
     const edit = this._orbitEdit;
     if (!edit) return;
-    edit.draft = { ...edit.recommended };
+    const region = edit.regionId ? RELAY_REGIONS.find(r => r.id === edit.regionId) : null;
+    edit.draft = {
+      ...edit.recommended,
+      longitudeDeg: region ? region.longitudeDeg : edit.draft.longitudeDeg,
+    };
     this.setOrbitControls(edit.draft);
     this.world.updateSatelliteOrbit(edit.id, edit.draft);
     this.world.zoomToOrbit(this.world.getVisualRadius(edit.draft.altitudeKm));
