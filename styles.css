@@ -624,6 +624,130 @@ html, body {
 .sat-sheet[hidden] {
   display: none;
 }
+
+.sheet-handle {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 16px;
+  transform: translateX(-50%);
+  cursor: grab;
+  touch-action: none;
+}
+
+.sheet-handle span {
+  width: 34px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--muted);
+  opacity: 0.7;
+}
+
+.sheet-handle.dragging {
+  cursor: grabbing;
+}
+
+.sat-sheet.collapsed {
+  height: 64px;
+  max-height: 64px;
+  padding: 8px 12px;
+  overflow: hidden;
+}
+
+.sat-sheet.collapsed .sat-detail,
+.sat-sheet.collapsed .instrument-detail,
+.sat-sheet.collapsed .orbit-editor,
+.sat-sheet.collapsed .sheet-close,
+.sat-sheet.collapsed .sheet-handle {
+  display: none;
+}
+
+.sat-compact {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.sat-sheet.collapsed .sat-compact {
+  display: flex;
+}
+
+.sat-compact[hidden] {
+  display: none;
+}
+
+.sat-compact-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sat-compact-name {
+  max-width: 38%;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sat-compact-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(140, 190, 255, 0.14);
+  overflow: hidden;
+}
+
+.sat-compact-bar i {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffcf6e, #59f2b2);
+}
+
+.sat-compact-bar i.low {
+  background: linear-gradient(90deg, #ff7d7d, #ffcf6e);
+}
+
+.sat-compact-value {
+  min-width: 34px;
+  color: var(--text);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.compact-btn {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(140, 190, 255, 0.07);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.compact-btn.close {
+  border-color: rgba(255, 125, 125, 0.4);
+  color: var(--danger);
+}
+
+.compact-btn:active {
+  transform: translateY(1px);
+}
 .sat-sheet.focus-mode {
   background: rgba(5, 10, 20, 0.26);
   backdrop-filter: blur(2px);
@@ -1058,6 +1182,10 @@ html, body {
     width: calc(100vw - 20px);
     padding: 12px;
   }
+  .sat-sheet.collapsed { height: 58px; max-height: 58px; padding: 7px 9px; }
+  .sat-compact { gap: 6px; }
+  .sat-compact-name { max-width: 32%; font-size: 10px; }
+  .compact-btn { width: 28px; height: 28px; font-size: 14px; }
   .sat-detail-facts { gap: 6px; }
   .sat-detail-facts div { padding: 7px 8px; }
   .sat-detail-facts dd { font-size: 11px; }
@@ -1214,6 +1342,10 @@ html, body {
     width: calc(100vw - 20px);
     padding: 12px;
   }
+  .sat-sheet.collapsed { height: 58px; max-height: 58px; padding: 7px 9px; }
+  .sat-compact { gap: 6px; }
+  .sat-compact-name { max-width: 32%; font-size: 10px; }
+  .compact-btn { width: 28px; height: 28px; font-size: 14px; }
   .sat-detail-facts { gap: 6px; }
   .sat-detail-facts div { padding: 7px 8px; }
   .sat-detail-facts dd { font-size: 11px; }

@@ -146,6 +146,14 @@ export class UI {
       devMoney500: $('dev-money-500'),
       devReset: $('dev-reset'),
       satSheet: $('sat-sheet'),
+      satSheetHandle: $('sat-sheet-handle'),
+      satCompact: $('sat-compact'),
+      satCompactName: $('sat-compact-name'),
+      satCompactFill: $('sat-compact-fill'),
+      satCompactValue: $('sat-compact-value'),
+      btnSatNext: $('btn-sat-next'),
+      btnSatExpand: $('btn-sat-expand'),
+      btnSatCompactClose: $('btn-sat-compact-close'),
       satDetail: $('sat-detail'),
       instrumentDetail: $('instrument-detail'),
       btnSatBack: $('btn-sat-back'),
@@ -218,6 +226,10 @@ export class UI {
     this.el.btnSatellites.addEventListener('click', () => this.togglePanel('panel-satellites'));
     if (this.el.btnSatBack) this.el.btnSatBack.addEventListener('click', () => this.backToSatList());
     if (this.el.btnSatSheetClose) this.el.btnSatSheetClose.addEventListener('click', () => this.hideSatSheet());
+    if (this.el.btnSatCompactClose) this.el.btnSatCompactClose.addEventListener('click', () => this.hideSatSheet());
+    if (this.el.btnSatNext) this.el.btnSatNext.addEventListener('click', () => this.nextSatellite());
+    if (this.el.btnSatExpand) this.el.btnSatExpand.addEventListener('click', () => this.expandSatSheet());
+    this.bindSatSheetHandle();
     if (this.el.btnSatInstrument) this.el.btnSatInstrument.addEventListener('click', () => this.showInstrument());
     if (this.el.btnInstrumentBack) this.el.btnInstrumentBack.addEventListener('click', () => this.showSatelliteView());
     if (this.el.btnPeriodUnit) {
@@ -464,8 +476,116 @@ export class UI {
     if (this.el.satSheet) {
       this.el.satSheet.classList.remove('orbit-mode');
       this.el.satSheet.classList.remove('focus-mode');
+      this.el.satSheet.classList.remove('collapsed');
     }
+    if (this.el.satCompact) this.el.satCompact.hidden = true;
     this.world.focusEarth();
+  }
+
+  bindSatSheetHandle() {
+    const handle = this.el.satSheetHandle;
+    if (!handle) return;
+    let startY = null;
+    let moved = false;
+    let pointerId = null;
+
+    const down = e => {
+      if (e.button !== undefined && e.button !== 0) return;
+      startY = e.clientY;
+      moved = false;
+      pointerId = e.pointerId;
+      handle.classList.add('dragging');
+      if (handle.setPointerCapture) {
+        try {
+          handle.setPointerCapture(e.pointerId);
+        } catch (err) {
+          // Синтетические события в тестах не имеют активного указателя.
+        }
+      }
+      e.preventDefault();
+    };
+
+    const move = e => {
+      if (startY === null || (pointerId !== null && e.pointerId !== pointerId)) return;
+      const dy = e.clientY - startY;
+      if (Math.abs(dy) > 6) moved = true;
+      if (dy > 32) {
+        this.collapseSatSheet();
+        startY = null;
+      } else if (dy < -32) {
+        this.expandSatSheet();
+        startY = null;
+      }
+      e.preventDefault();
+    };
+
+    const end = e => {
+      if (startY === null) return;
+      if (!moved) this.toggleSatSheet();
+      startY = null;
+      pointerId = null;
+      handle.classList.remove('dragging');
+      e.preventDefault();
+    };
+
+    handle.addEventListener('pointerdown', down);
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+    handle.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.toggleSatSheet();
+      }
+    });
+  }
+
+  toggleSatSheet() {
+    if (!this.el.satSheet) return;
+    if (this.el.satSheet.classList.contains('collapsed')) {
+      this.expandSatSheet();
+    } else {
+      this.collapseSatSheet();
+    }
+  }
+
+  collapseSatSheet() {
+    if (!this.el.satSheet || this.el.satSheet.hidden) return;
+    this.el.satSheet.classList.add('collapsed');
+    if (this.el.satCompact) this.el.satCompact.hidden = false;
+    this.renderCompact(this.game.state);
+    this.el.satSheet.scrollTop = 0;
+  }
+
+  expandSatSheet() {
+    if (!this.el.satSheet) return;
+    this.el.satSheet.classList.remove('collapsed');
+    if (this.el.satCompact) this.el.satCompact.hidden = true;
+  }
+
+  nextSatellite() {
+    const satellites = this.game.state.satellites;
+    if (!satellites.length) return;
+    const current = this._detailId || this.game.state.selectedId;
+    const index = satellites.findIndex(sat => sat.id === current);
+    const next = satellites[(index + 1) % satellites.length];
+
+    this._detailId = next.id;
+    if (this.el.satSheet) {
+      this.el.satSheet.hidden = false;
+      this.el.satSheet.classList.remove('orbit-mode');
+      this.el.satSheet.classList.add('focus-mode');
+      this.el.satSheet.classList.add('collapsed');
+    }
+    if (this.el.satDetail) this.el.satDetail.hidden = false;
+    if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+    if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
+    if (this.el.satCompact) this.el.satCompact.hidden = false;
+
+    this.game.select(next.id);
+    this.renderSatDetail(next.id);
+    this.renderCompact(this.game.state);
+    this.world.focusSatellite(next.id);
   }
 
   backToSatList() {
@@ -484,7 +604,9 @@ export class UI {
     if (this.el.satSheet) {
       this.el.satSheet.classList.remove('orbit-mode');
       this.el.satSheet.classList.toggle('focus-mode', options.focus !== false);
+      this.el.satSheet.classList.remove('collapsed');
     }
+    if (this.el.satCompact) this.el.satCompact.hidden = true;
     this.el.satSheet.hidden = false;
     this.renderSatDetail(id);
     if (options.focus !== false) this.world.focusSatellite(id);
@@ -960,6 +1082,19 @@ export class UI {
     this.el.btnBuyRelay.textContent = label;
   }
 
+  renderCompact(state) {
+    if (!this.el.satCompactName) return;
+    const sat = state.satellites.find(item => item.id === this._detailId)
+      || state.satellites.find(item => item.id === state.selectedId)
+      || state.satellites[0]
+      || null;
+    const energy = sat ? Math.round(Math.max(0, Math.min(100, sat.energy))) : 0;
+    this.el.satCompactName.textContent = sat ? sat.name : '—';
+    this.el.satCompactFill.style.width = energy + '%';
+    this.el.satCompactValue.textContent = energy + '%';
+    this.el.satCompactFill.classList.toggle('low', energy < 20);
+  }
+
   render(state) {
     this.el.balance.textContent = formatMoney(state.balance);
     this.el.income.textContent = '+' + '$' + state.incomePerSec.toFixed(2) + '/сек';
@@ -975,6 +1110,7 @@ export class UI {
       this.el.energySatName.title = sat ? sat.name : '';
     }
     this.el.energyFill.classList.toggle('low', energyPct < 20);
+    this.renderCompact(state);
     const nextTarget = sat ? this.nextContractTarget(sat.id) : null;
     const angle = nextTarget ? nextTarget.angle : null;
     const overZone = angle !== null && angle <= CONTRACT_ANGLE;

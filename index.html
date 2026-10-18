@@ -184,6 +184,9 @@
   </section>
 
   <div id="sat-sheet" class="sat-sheet" hidden>
+    <div id="sat-sheet-handle" class="sheet-handle" role="button" tabindex="0" aria-label="Свернуть или развернуть карточку">
+      <span></span>
+    </div>
     <button id="btn-sat-sheet-close" class="sheet-close" type="button" aria-label="Закрыть карточку">✕</button>
 
     <div id="sat-detail" class="sat-detail">
@@ -310,6 +313,17 @@
         <button id="btn-orbit-cancel" class="back-btn" type="button">Отмена</button>
       </div>
       <p class="panel-note">Камера отдаляется под выбранную орбиту. При приближении к рекомендованной высоте или наклонению ползунок прилипает к ней.</p>
+    </div>
+
+    <div id="sat-compact" class="sat-compact" hidden>
+      <div class="sat-compact-main">
+        <span id="sat-compact-name" class="sat-compact-name">Картограф-1</span>
+        <div class="sat-compact-bar"><i id="sat-compact-fill"></i></div>
+        <span id="sat-compact-value" class="sat-compact-value">100%</span>
+      </div>
+      <button id="btn-sat-next" class="compact-btn" type="button" title="Следующий спутник" aria-label="Следующий спутник">→</button>
+      <button id="btn-sat-expand" class="compact-btn" type="button" title="Выдвинуть карточку" aria-label="Выдвинуть карточку">↑</button>
+      <button id="btn-sat-compact-close" class="compact-btn close" type="button" title="Закрыть карточку" aria-label="Закрыть карточку">✕</button>
     </div>
   </div>
 
