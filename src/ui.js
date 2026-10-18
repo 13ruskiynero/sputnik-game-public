@@ -28,6 +28,26 @@ function orbitOf(sat) {
   };
 }
 
+function orbitLabelFor(orbit) {
+  const inclination = Math.abs(orbit.inclinationDeg);
+  if (inclination >= 80) return 'Полярная';
+  if (inclination <= 5) return orbit.altitudeKm >= 30000 ? 'Геостационарная' : 'Экваториальная';
+  return 'Наклонная';
+}
+
+const EARTH_MU = 398600.4418;
+
+function orbitalNumbers(altitudeKm) {
+  const radius = EARTH_RADIUS_KM + altitudeKm;
+  const periodSec = 2 * Math.PI * Math.sqrt(Math.pow(radius, 3) / EARTH_MU);
+  const speedKmS = Math.sqrt(EARTH_MU / radius);
+  return {
+    periodSec,
+    speedKmS,
+    orbitsPerDay: 86400 / periodSec,
+  };
+}
+
 
 export class UI {
   constructor(game, world, time = { scale: 1 }) {
@@ -38,6 +58,8 @@ export class UI {
     this._zoneKey = '';
     this._detailId = null;
     this._orbitEdit = null;
+    this._periodUnit = 'game';
+    this._speedUnit = 'game';
 
     const $ = id => document.getElementById(id);
     this.el = {
@@ -79,10 +101,12 @@ export class UI {
       satDetailEnergyFill: $('sat-detail-energy-fill'),
       satDetailWork: $('sat-detail-work'),
       satDetailInstrument: $('sat-detail-instrument'),
-      satDetailDistance: $('sat-detail-distance'),
+      satDetailOrbit: $('sat-detail-orbit'),
       satDetailAltitude: $('sat-detail-altitude'),
       satDetailPeriod: $('sat-detail-period'),
       satDetailSpeed: $('sat-detail-speed'),
+      btnPeriodUnit: $('btn-period-unit'),
+      btnSpeedUnit: $('btn-speed-unit'),
       satDetailNote: $('sat-detail-note'),
       instrumentName: $('instrument-name'),
       instrumentSubtitle: $('instrument-subtitle'),
@@ -118,6 +142,18 @@ export class UI {
     if (this.el.btnSatSheetClose) this.el.btnSatSheetClose.addEventListener('click', () => this.hideSatSheet());
     if (this.el.btnSatInstrument) this.el.btnSatInstrument.addEventListener('click', () => this.showInstrument());
     if (this.el.btnInstrumentBack) this.el.btnInstrumentBack.addEventListener('click', () => this.showSatelliteView());
+    if (this.el.btnPeriodUnit) {
+      this.el.btnPeriodUnit.addEventListener('click', () => {
+        this._periodUnit = this._periodUnit === 'game' ? 'earth' : 'game';
+        if (this._detailId) this.renderSatDetail(this._detailId);
+      });
+    }
+    if (this.el.btnSpeedUnit) {
+      this.el.btnSpeedUnit.addEventListener('click', () => {
+        this._speedUnit = this._speedUnit === 'game' ? 'earth' : 'game';
+        if (this._detailId) this.renderSatDetail(this._detailId);
+      });
+    }
     if (this.el.btnOrbitBack) this.el.btnOrbitBack.addEventListener('click', () => this.cancelOrbitEdit());
     if (this.el.btnOrbitCancel) this.el.btnOrbitCancel.addEventListener('click', () => this.cancelOrbitEdit());
     if (this.el.btnOrbitRecommended) this.el.btnOrbitRecommended.addEventListener('click', () => this.resetOrbitToRecommended());
@@ -309,8 +345,19 @@ export class UI {
     const orbit = orbitOf(sat);
     const energy = Math.round(Math.max(0, Math.min(100, sat.energy)));
     const altitudeKm = orbit.altitudeKm;
-    const distanceKm = EARTH_RADIUS_KM + altitudeKm;
+    const inclination = Math.abs(orbit.inclinationDeg).toFixed(0) + '°';
+    const orbitLabel = orbitLabelFor(orbit);
+    const real = orbitalNumbers(altitudeKm);
     const instrument = spec.instrument || {};
+    const gameSpeed = Number.isFinite(info.speed) && Number.isFinite(info.radius)
+      ? info.speed * info.radius
+      : null;
+    const periodText = this._periodUnit === 'earth'
+      ? real.orbitsPerDay.toFixed(2) + ' оборотов/сут'
+      : (Number.isFinite(info.periodSec) ? info.periodSec.toFixed(1) : '—') + ' с/оборот';
+    const speedText = this._speedUnit === 'earth'
+      ? Math.round(real.speedKmS * 3600).toLocaleString('ru-RU') + ' км/ч'
+      : (gameSpeed != null ? gameSpeed.toFixed(2) : '—') + ' ед/с';
 
     this.el.satDetailName.textContent = sat.name;
     this.el.satDetailSubtitle.textContent = spec.kind || '—';
@@ -319,19 +366,23 @@ export class UI {
     this.el.satDetailEnergyFill.classList.toggle('low', energy < 20);
     this.el.satDetailWork.textContent = spec.role || '—';
     this.el.satDetailInstrument.textContent = instrument.name || '—';
-    this.el.satDetailDistance.textContent = distanceKm != null
-      ? distanceKm.toLocaleString('ru-RU') + ' км от центра'
-      : '—';
-    this.el.satDetailAltitude.textContent = altitudeKm != null
-      ? altitudeKm.toLocaleString('ru-RU') + ' км над поверхностью'
-      : '—';
-    this.el.satDetailPeriod.textContent = Number.isFinite(info.periodSec)
-      ? info.periodSec.toFixed(1) + ' с'
-      : '—';
-    this.el.satDetailSpeed.textContent = Number.isFinite(info.speed)
-      ? info.speed.toFixed(2) + ' рад/с'
-      : '—';
+    this.el.satDetailOrbit.textContent =
+      [orbitLabel, inclination].filter(Boolean).join(' · ');
+    this.el.satDetailAltitude.textContent =
+      altitudeKm.toLocaleString('ru-RU') + ' км над поверхностью';
+    this.el.satDetailPeriod.textContent = periodText;
+    this.el.satDetailSpeed.textContent = speedText;
     this.el.satDetailNote.textContent = spec.note || '';
+    if (this.el.btnPeriodUnit) {
+      this.el.btnPeriodUnit.title = this._periodUnit === 'earth'
+        ? 'Показать игровой период'
+        : 'Показать земной период';
+    }
+    if (this.el.btnSpeedUnit) {
+      this.el.btnSpeedUnit.title = this._speedUnit === 'earth'
+        ? 'Показать игровую скорость'
+        : 'Показать земную скорость';
+    }
   }
 
   renderInstrument(sat) {

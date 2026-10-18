@@ -158,9 +158,17 @@
 
       <dl class="sat-detail-facts">
         <div><dt>Работа</dt><dd id="sat-detail-work">Картографирование поверхности</dd></div>
-        <div><dt>Расстояние</dt><dd id="sat-detail-distance">6 921 км от центра</dd></div>
         <div><dt>Высота</dt><dd id="sat-detail-altitude">550 км над поверхностью</dd></div>
-        <div><dt>Период (игровой)</dt><dd id="sat-detail-period">28.6 с</dd></div>
+        <div><dt>Орбита</dt><dd id="sat-detail-orbit">Полярная · 90°</dd></div>
+        <div>
+          <dt>Период</dt>
+          <dd>
+            <button id="btn-period-unit" class="unit-toggle" type="button" title="Переключить единицы периода">
+              <span id="sat-detail-period">28.6 с/виток</span>
+              <span class="unit-swap" aria-hidden="true">⇄</span>
+            </button>
+          </dd>
+        </div>
         <div class="sat-detail-instrument-cell">
           <dt>Прибор</dt>
           <dd>
@@ -170,7 +178,15 @@
             </button>
           </dd>
         </div>
-        <div><dt>Скорость (игр.)</dt><dd id="sat-detail-speed">0.22 рад/с</dd></div>
+        <div>
+          <dt>Скорость</dt>
+          <dd>
+            <button id="btn-speed-unit" class="unit-toggle" type="button" title="Переключить единицы скорости">
+              <span id="sat-detail-speed">0.47 ед/с</span>
+              <span class="unit-swap" aria-hidden="true">⇄</span>
+            </button>
+          </dd>
+        </div>
       </dl>
 
       <p id="sat-detail-note" class="panel-note">Снимает участки поверхности. Для снимка нужен пролёт над зоной контракта.</p>
