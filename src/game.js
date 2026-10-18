@@ -2,7 +2,7 @@
 
 export const ENERGY_MAX = 100;
 export const ACTION_ENERGY_COST = 2;
-export const CHARGE_RATE = 2;       // единиц в секунду на солнечной стороне
+export const CHARGE_RATE = 2;       // единиц в секунду вне тени Земли
 export const DRAIN_RATE = 0;        // картограф в тени не разряжается
 export const RELAY_DRAIN_RATE = 2;  // связь в тени: расход, сбалансированный с зарядом
 export const CLICKS_PER_DOLLAR = 5;

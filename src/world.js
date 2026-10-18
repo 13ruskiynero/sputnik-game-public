@@ -15,6 +15,16 @@ const ECLIPSE_HOLD = 15;
 const ECLIPSE_OUT = 6;
 const GAME_YEAR = (Math.PI * 2) / SUN_ORBIT_SPEED;
 
+// Спутник в тени Земли, если он позади планеты и его расстояние
+// от оси Земля–Солнце меньше радиуса Земли. Иначе он видит Солнце
+// мимо края планеты и заряжается.
+function isSunlitPosition(position, sunDirection) {
+  const along = position.dot(sunDirection);
+  if (along >= 0) return true;
+  const perpendicularSq = Math.max(0, position.lengthSq() - along * along);
+  return perpendicularSq >= EARTH_RADIUS * EARTH_RADIUS;
+}
+
 function latLonToVec3(lat, lon, radius) {
   const phi = (90 - lat) * Math.PI / 180;
   const theta = (lon + 180) * Math.PI / 180;
@@ -453,7 +463,7 @@ export function createWorld(canvas, onSelect) {
     const pos = new THREE.Vector3();
     for (const [id, entry] of satellites) {
       entry.mesh.getWorldPosition(pos);
-      map[id] = pos.normalize().dot(sunDir) > 0.02;
+      map[id] = isSunlitPosition(pos, sunDir);
     }
     return map;
   }
@@ -762,6 +772,13 @@ export function createWorld(canvas, onSelect) {
     setContract,
     getAngleToContract,
     getSunlitMap,
+    isPointSunlit(x, y, z, sunDirection = null) {
+      const position = new THREE.Vector3(x, y, z);
+      const direction = sunDirection
+        ? new THREE.Vector3(sunDirection.x, sunDirection.y, sunDirection.z).normalize()
+        : sunDir;
+      return isSunlitPosition(position, direction);
+    },
     triggerObservation,
     triggerEclipse,
     setCameraOrbit(nextAzimuth, nextPolar) {
@@ -783,6 +800,7 @@ export function createWorld(canvas, onSelect) {
         })(),
         moonAngle: Math.round(moonAngle * 1000) / 1000,
         sunAngle: Math.round(sunOrbitAngle * 100000) / 100000,
+        sunDir: { x: sunDir.x, y: sunDir.y, z: sunDir.z },
         eclipseActive: Boolean(eclipse),
         eclipseType: eclipse ? eclipse.type : nextEclipseType,
         nextEclipseType,
