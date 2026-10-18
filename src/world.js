@@ -233,6 +233,7 @@ export function createWorld(canvas, onSelect) {
       blending: THREE.AdditiveBlending,
     }));
     points.renderOrder = renderOrder;
+    points.frustumCulled = false;
     starfield.add(points);
     starfieldStats.layers += 1;
     starfieldStats.stars += count;
@@ -313,6 +314,7 @@ export function createWorld(canvas, onSelect) {
     sprite.position.copy(spec.direction.normalize()).multiplyScalar(235);
     sprite.scale.setScalar(spec.scale);
     sprite.renderOrder = -4;
+    sprite.frustumCulled = false;
     starfield.add(sprite);
     starfieldStats.nebulas += 1;
   }
@@ -877,6 +879,8 @@ export function createWorld(canvas, onSelect) {
   }
 
   function render() {
+    // Фон привязан к камере: звёзды не смещаются при зуме и облёте.
+    starfield.position.copy(camera.position);
     renderer.render(scene, camera);
   }
 
@@ -1135,7 +1139,11 @@ export function createWorld(canvas, onSelect) {
         cameraOrbit: { azimuth, polar },
         planetSpin: -earthSpinGroup.rotation.y,
         hasSun: Boolean(sunSprite.parent),
-        starfield: { ...starfieldStats },
+        starfield: {
+          ...starfieldStats,
+          cameraAttached: true,
+          parallax: Math.round(starfield.position.distanceTo(camera.position) * 1000) / 1000,
+        },
         sunDistance: Math.round(sunSprite.position.length() * 100) / 100,
         sunScale: sunSprite.scale.x,
         sunScreen: (() => {
