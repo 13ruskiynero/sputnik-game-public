@@ -85,7 +85,6 @@ export class UI {
       satDetailEnergyFill: $('sat-detail-energy-fill'),
       satDetailWork: $('sat-detail-work'),
       satDetailInstrument: $('sat-detail-instrument'),
-      satDetailOrbit: $('sat-detail-orbit'),
       satDetailDistance: $('sat-detail-distance'),
       satDetailAltitude: $('sat-detail-altitude'),
       satDetailPeriod: $('sat-detail-period'),
@@ -314,23 +313,18 @@ export class UI {
     const spec = SATELLITE_SPECS[sat.type] || {};
     const info = this.world.getSatelliteInfo(id) || {};
     const orbit = orbitOf(sat);
-    const orbitLabel = orbitLabelFor(orbit);
     const energy = Math.round(Math.max(0, Math.min(100, sat.energy)));
-    const inclination = Math.abs(orbit.inclinationDeg).toFixed(0) + '°';
     const altitudeKm = orbit.altitudeKm;
     const distanceKm = EARTH_RADIUS_KM + altitudeKm;
     const instrument = spec.instrument || {};
 
     this.el.satDetailName.textContent = sat.name;
-    this.el.satDetailSubtitle.textContent =
-      [spec.kind, orbitLabel].filter(Boolean).join(' · ');
+    this.el.satDetailSubtitle.textContent = spec.kind || '—';
     this.el.satDetailEnergy.textContent = energy + '%';
     this.el.satDetailEnergyFill.style.width = energy + '%';
     this.el.satDetailEnergyFill.classList.toggle('low', energy < 20);
     this.el.satDetailWork.textContent = spec.role || '—';
     this.el.satDetailInstrument.textContent = instrument.name || '—';
-    this.el.satDetailOrbit.textContent =
-      [orbitLabel, inclination].filter(Boolean).join(' · ');
     this.el.satDetailDistance.textContent = distanceKm != null
       ? distanceKm.toLocaleString('ru-RU') + ' км от центра'
       : '—';

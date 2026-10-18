@@ -436,23 +436,23 @@ html, body {
 }
 
 .sat-sheet.orbit-mode {
-  background: rgba(5, 10, 20, 0.34);
-  backdrop-filter: blur(3px);
+  background: rgba(5, 10, 20, 0.2);
+  backdrop-filter: blur(1.5px);
 }
 
 .sat-sheet.orbit-mode .orbit-control {
-  background: rgba(5, 10, 20, 0.62);
+  background: rgba(5, 10, 20, 0.52);
 }
 
 .sat-sheet.orbit-mode .orbit-actions .buy-btn,
 .sat-sheet.orbit-mode .back-btn {
-  background-color: rgba(5, 10, 20, 0.62);
+  background-color: rgba(5, 10, 20, 0.52);
 }
 
 .sat-sheet.orbit-mode .panel-note {
   padding: 6px 8px;
   border-radius: 8px;
-  background: rgba(5, 10, 20, 0.55);
+  background: rgba(5, 10, 20, 0.45);
 }
 
 .sat-sheet.orbit-mode .sat-detail-head h3,
