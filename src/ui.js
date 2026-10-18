@@ -28,12 +28,6 @@ function orbitOf(sat) {
   };
 }
 
-function orbitLabelFor(orbit) {
-  const inclination = Math.abs(orbit.inclinationDeg);
-  if (inclination >= 80) return 'Полярная';
-  if (inclination <= 5) return orbit.altitudeKm >= 30000 ? 'Геостационарная' : 'Экваториальная';
-  return 'Наклонная';
-}
 
 export class UI {
   constructor(game, world, time = { scale: 1 }) {
@@ -399,8 +393,7 @@ export class UI {
     this.el.orbitAltitudeValue.textContent = altitudeKm.toLocaleString('ru-RU') + ' км';
     this.el.orbitInclinationValue.textContent = inclinationDeg + '°';
     const sat = this.game.state.satellites.find(s => s.id === this._orbitEdit?.id);
-    this.el.orbitSubtitle.textContent =
-      [sat?.name, orbitLabelFor({ altitudeKm, inclinationDeg })].filter(Boolean).join(' · ');
+    this.el.orbitSubtitle.textContent = sat ? sat.name : '';
   }
 
   onOrbitInput() {
