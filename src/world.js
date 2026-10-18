@@ -671,7 +671,7 @@ export function createWorld(canvas, onSelect) {
     }
 
     if (!dragging) {
-      earthSpinGroup.rotation.y += AUTO_SPIN * dt;
+      earthSpinGroup.rotation.y -= AUTO_SPIN * dt;
       if (Math.abs(spinAzimuth) > 0.0001 || Math.abs(spinPolar) > 0.0001) {
         azimuth += spinAzimuth;
         polar = THREE.MathUtils.clamp(polar + spinPolar, MIN_POLAR, MAX_POLAR);
@@ -939,7 +939,7 @@ export function createWorld(canvas, onSelect) {
         camera: { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov },
         zoom: zoomFactor,
         cameraOrbit: { azimuth, polar },
-        planetSpin: earthSpinGroup.rotation.y,
+        planetSpin: -earthSpinGroup.rotation.y,
         hasSun: Boolean(sunSprite.parent),
         sunScreen: (() => {
           const v = sunSprite.position.clone().project(camera);
@@ -980,6 +980,7 @@ export function createWorld(canvas, onSelect) {
         periodSec: (Math.PI * 2) / Math.abs(entry.speed),
         speed: entry.speed,
         angularSpeed: entry.speed,
+        phase: entry.phase,
         inclinationDeg: THREE.MathUtils.radToDeg(entry.orbitGroup.rotation.x),
         nodeDeg: THREE.MathUtils.radToDeg(entry.orbitGroup.rotation.y),
         geostationary: Math.abs(entry.altitudeKm - GEO_REF_KM) <= 50
@@ -999,7 +1000,9 @@ export function createWorld(canvas, onSelect) {
       if (!entry) return null;
       const v = new THREE.Vector3();
       entry.mesh.getWorldPosition(v);
-      earthSpinGroup.worldToLocal(v);
+      earthGroup.updateMatrixWorld(true);
+      earthGroup.worldToLocal(v);
+      v.applyAxisAngle(new THREE.Vector3(0, 1, 0), -earthSpinGroup.rotation.y);
       return { x: v.x, y: v.y, z: v.z };
     },
   };
