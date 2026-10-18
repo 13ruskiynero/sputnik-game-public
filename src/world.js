@@ -325,15 +325,36 @@ function buildSatelliteMesh(type) {
     group.add(antennaTip);
   }
 
-  for (const x of [-0.055, 0.055]) {
-    const thruster = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.055, 8), mats.dark);
-    thruster.rotation.x = -Math.PI / 2;
-    thruster.position.set(x, 0, -0.145);
-    group.add(thruster);
-  }
+  // Одно сопло двигателя на стороне, противоположной рабочей:
+  // у картографа сзади (−Z), у связи сзади относительно тарелки (+Z).
+  const engineZ = isRelay ? 0.16 : -0.16;
+  const engine = new THREE.Mesh(
+    new THREE.CylinderGeometry(
+      isRelay ? 0.045 : 0.025,
+      isRelay ? 0.025 : 0.045,
+      0.07,
+      12,
+      1,
+      true
+    ),
+    mats.dark
+  );
+  engine.rotation.x = Math.PI / 2;
+  engine.position.z = engineZ;
+  engine.userData.isEngineNozzle = true;
+  group.add(engine);
+
+  const engineRim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.045, 0.0035, 8, 20),
+    mats.frame
+  );
+  engineRim.position.z = engineZ + (isRelay ? 0.035 : -0.035);
+  engineRim.userData.isEngineRim = true;
+  group.add(engineRim);
 
   const statusLight = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), mats.light);
-  statusLight.position.set(0.075, 0.07, 0.115);
+  statusLight.position.set(0.075, 0.07, isRelay ? -0.115 : 0.115);
+  statusLight.userData.isStatusLight = true;
   group.add(statusLight);
 
   if (isRelay) {
