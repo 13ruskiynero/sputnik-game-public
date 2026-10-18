@@ -9,7 +9,7 @@ const time = { scale: 1, paused: false };
 const ui = new UI(game, world, time);
 
 world.syncSatellites(game.state.satellites);
-world.setContract(game.state.contract);
+world.setContract(game.state.story?.contractsUnlocked ? game.state.contract : null);
 ui.render(game.state);
 
 let lastContractId = game.state.contract ? game.state.contract.id : null;
@@ -17,7 +17,7 @@ let lastContractId = game.state.contract ? game.state.contract.id : null;
 game.subscribe(state => {
   if (state.contract && state.contract.id !== lastContractId) {
     lastContractId = state.contract.id;
-    world.setContract(state.contract);
+    world.setContract(state.story?.contractsUnlocked ? state.contract : null);
   }
   world.syncSatellites(state.satellites);
   ui.render(state);
@@ -38,6 +38,7 @@ requestAnimationFrame(frame);
 
 window.addEventListener('resize', () => world.resize());
 setInterval(() => game.save(), 3000);
+setInterval(() => ui.render(game.state), 1000);
 
 // Для отладки и автотестов.
 window.__sputnik = { game, world, ui, time };

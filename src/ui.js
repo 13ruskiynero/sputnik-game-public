@@ -1,4 +1,4 @@
-import { ACTION_ENERGY_COST, CLICKS_PER_DOLLAR, CONTRACT_ANGLE, EARTH_RADIUS_KM, RELAY_COST, SATELLITE_SPECS, RELAY_REGIONS } from './game.js';
+import { ACTION_ENERGY_COST, BALANCE, CLICKS_PER_DOLLAR, CONTRACT_ANGLE, EARTH_RADIUS_KM, RELAY_COST, RELAY_INCOME, SATELLITE_SPECS, RELAY_REGIONS, STORY_STAGES } from './game.js';
 
 function formatMoney(value) {
   if (!Number.isFinite(value)) return '$0';
@@ -28,6 +28,26 @@ function orbitOf(sat) {
     inclinationDeg: Number.isFinite(orbit.inclinationDeg) ? orbit.inclinationDeg : recommended.inclinationDeg,
     longitudeDeg: Number.isFinite(orbit.longitudeDeg) ? orbit.longitudeDeg : (recommended.longitudeDeg || 0),
   };
+}
+
+function formatTime(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const minutes = Math.floor(total / 60);
+  const secs = total % 60;
+  return String(minutes).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+}
+
+function storyTextFor(stage) {
+  if (stage === STORY_STAGES.CONTRACTS) {
+    return 'Контракты открыты. Накопи $500 — я найду для нас старый спутник связи.';
+  }
+  if (stage === STORY_STAGES.RELAY) {
+    return 'Связь уже в магазине за $500. Купи её и выбери регион, где она будет работать.';
+  }
+  if (stage === STORY_STAGES.AFTER_RELAY) {
+    return 'Отлично, связь на месте. Скоро попрошу тебя сделать несколько снимков.';
+  }
+  return 'Накопи $50 ручной работой — потом я договорюсь о первых заказах.';
 }
 
 function formatLongitude(deg) {
@@ -77,6 +97,7 @@ export class UI {
     this._orbitEdit = null;
     this._periodUnit = 'game';
     this._speedUnit = 'game';
+    this._storyStage = null;
 
     const $ = id => document.getElementById(id);
     this.el = {
@@ -92,6 +113,17 @@ export class UI {
       contractZone: $('contract-zone'),
       contractCard: $('contract-card'),
       btnSatellites: $('btn-satellites'),
+      storyText: $('story-text'),
+      storyTag: $('story-tag'),
+      storyGoal: $('story-goal'),
+      storyProgressFill: $('story-progress-fill'),
+      storyMetrics: $('story-metrics'),
+      relayCardDesc: $('relay-card-desc'),
+      shopRealCard: $('shop-real-card'),
+      shopThermalCard: $('shop-thermal-card'),
+      devMoney50: $('dev-money-50'),
+      devMoney500: $('dev-money-500'),
+      devReset: $('dev-reset'),
       satSheet: $('sat-sheet'),
       satDetail: $('sat-detail'),
       instrumentDetail: $('instrument-detail'),
@@ -192,14 +224,16 @@ export class UI {
     this.el.btnMenu.addEventListener('click', () => this.togglePanel('panel-menu'));
     this.el.btnAction.addEventListener('click', () => this.onAction());
     this.el.btnBuyRelay.addEventListener('click', () => this.onBuyRelay());
-    this.el.btnReset.addEventListener('click', () => {
-      this.game.reset();
-      this.time.scale = 1;
-      this.time.paused = false;
-      this.updateDevButtons();
-      this.closePanels();
-      this.toast('Прогресс сброшен', 'warn');
-    });
+    this.el.btnReset.addEventListener('click', () => this.resetProgress());
+    if (this.el.devReset) {
+      this.el.devReset.addEventListener('click', () => this.resetProgress());
+    }
+    if (this.el.devMoney50) {
+      this.el.devMoney50.addEventListener('click', () => this.devAddMoney(50));
+    }
+    if (this.el.devMoney500) {
+      this.el.devMoney500.addEventListener('click', () => this.devAddMoney(500));
+    }
     this.bindDevSpeed(this.el.devSpeed2, 2);
     this.bindDevSpeed(this.el.devSpeed5, 5);
     if (this.el.devPause) {
@@ -217,6 +251,21 @@ export class UI {
         if (panel) panel.classList.remove('open');
       });
     });
+  }
+
+  devAddMoney(amount) {
+    this.game.addMoney(amount);
+    this.toast('DEV: +$' + amount, 'money');
+  }
+
+  resetProgress() {
+    this.game.reset();
+    this.time.scale = 1;
+    this.time.paused = false;
+    this.hideSatSheet();
+    this.closePanels();
+    this.updateDevButtons();
+    this.toast('Прогресс сброшен', 'warn');
   }
 
   bindDevSpeed(button, scale) {
@@ -656,7 +705,7 @@ export class UI {
       this.toast(result.reason, 'warn');
       return;
     }
-    this.toast('Куплен ' + result.sat.name + ': +$0.05/сек', 'ok');
+    this.toast('Куплен ' + result.sat.name + ': +$' + RELAY_INCOME.toFixed(2) + '/сек', 'ok');
     this.closePanels();
     this.showSatDetail(result.sat.id);
     this.openOrbitEditor();
@@ -678,6 +727,77 @@ export class UI {
       node.classList.add('out');
       setTimeout(() => node.remove(), 260);
     }, 2200);
+  }
+
+  renderStory(state) {
+    if (!this.el.storyText) return;
+    const story = state.story || {};
+    const stage = story.stage || STORY_STAGES.FIRST50;
+    const stats = state.stats || {};
+    let goal = 'Цель: $' + BALANCE.firstGoal;
+    let progress = Math.min(100, (state.balance / BALANCE.firstGoal) * 100);
+
+    if (stage === STORY_STAGES.CONTRACTS) {
+      goal = 'Цель: $' + BALANCE.relayGoal;
+      progress = Math.min(100, (state.balance / BALANCE.relayGoal) * 100);
+    } else if (stage === STORY_STAGES.RELAY) {
+      goal = 'Купить связь за $' + RELAY_COST;
+      progress = story.relayUnlocked ? 100 : Math.min(100, (state.balance / RELAY_COST) * 100);
+    } else if (stage === STORY_STAGES.AFTER_RELAY) {
+      goal = 'Связь выведена';
+      progress = 100;
+    }
+
+    this.el.storyText.textContent = storyTextFor(stage);
+    this.el.storyTag.textContent = stage === STORY_STAGES.AFTER_RELAY ? 'Готово' : 'На связи';
+    this.el.storyGoal.textContent = goal;
+    this.el.storyProgressFill.style.width = progress + '%';
+    if (this.el.storyMetrics) {
+      const earned = Number.isFinite(stats.totalEarned) ? stats.totalEarned : 0;
+      const seconds = Number.isFinite(stats.playSeconds) ? stats.playSeconds : 0;
+      this.el.storyMetrics.textContent = 'Заработано ' + formatMoney(earned) + ' · ' + formatTime(seconds);
+    }
+
+    if (this._storyStage && this._storyStage !== stage) {
+      if (stage === STORY_STAGES.CONTRACTS) this.toast('Друг: контракты открыты', 'ok');
+      if (stage === STORY_STAGES.RELAY) this.toast('Друг: связь доступна за $500', 'money');
+      if (stage === STORY_STAGES.AFTER_RELAY) this.toast('Друг: связь выведена', 'ok');
+    }
+    this._storyStage = stage;
+  }
+
+  renderShop(state) {
+    const story = state.story || {};
+    const unlocked = Boolean(story.relayUnlocked);
+    const purchased = Boolean(story.relayPurchased);
+    const contractsUnlocked = Boolean(story.contractsUnlocked);
+
+    if (this.el.btnTasks) {
+      this.el.btnTasks.hidden = !contractsUnlocked;
+    }
+    if (!contractsUnlocked) {
+      this.el.contractCard.classList.remove('open');
+    }
+    if (this.el.shopRealCard) this.el.shopRealCard.hidden = !purchased;
+    if (this.el.shopThermalCard) this.el.shopThermalCard.hidden = !purchased;
+
+    let desc = 'Друг обещал помочь с выводом после $500.';
+    let label = 'Закрыто';
+    let disabled = true;
+    if (unlocked && purchased) {
+      desc = 'Старая связь уже выведена. Друг помог только один раз.';
+      label = 'Куплен';
+    } else if (unlocked) {
+      desc = 'Пассивный доход +$' + RELAY_INCOME.toFixed(2) + '/сек. Выбери регион GEO.';
+      disabled = state.balance < RELAY_COST;
+      label = disabled ? '$' + RELAY_COST : '$' + RELAY_COST + ' — купить';
+    } else if (state.balance >= BALANCE.relayGoal) {
+      desc = 'Друг ещё не вышел на связь.';
+    }
+
+    if (this.el.relayCardDesc) this.el.relayCardDesc.textContent = desc;
+    this.el.btnBuyRelay.classList.toggle('is-disabled', disabled);
+    this.el.btnBuyRelay.textContent = label;
   }
 
   render(state) {
@@ -703,7 +823,7 @@ export class UI {
       this.el.contractTitle.textContent = contract.title;
       this.el.contractReward.textContent = '$' + contract.reward;
       this.el.contractShots.textContent =
-        contract.shots + '/' + contract.required + ' снимок';
+        contract.shots + '/' + contract.required + ' снимка';
       const zone = zoneHint(angle);
       if (zone !== this._zoneKey) {
         this._zoneKey = zone;
@@ -734,8 +854,8 @@ export class UI {
       this.renderSatList(state);
     }
 
-    this.el.btnBuyRelay.classList.toggle('is-disabled', state.balance < RELAY_COST);
-    this.el.btnBuyRelay.textContent = state.balance >= RELAY_COST ? '$' + RELAY_COST + ' — купить' : '$' + RELAY_COST;
+    this.renderStory(state);
+    this.renderShop(state);
 
     if (this.el.satSheet && !this.el.satSheet.hidden && this._detailId) {
       const exists = state.satellites.some(s => s.id === this._detailId);

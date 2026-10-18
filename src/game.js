@@ -7,8 +7,28 @@ export const DRAIN_RATE = 0;        // картограф в тени не ра�
 export const RELAY_DRAIN_RATE = 2;  // связь в тени: расход, сбалансированный с зарядом
 export const CLICKS_PER_DOLLAR = 5;
 export const CONTRACT_ANGLE = 0.42; // ~24 градуса
-export const RELAY_COST = 25;
-export const RELAY_INCOME = 0.05;
+
+export const BALANCE = {
+  firstGoal: 50,
+  relayGoal: 500,
+  contractRewardMin: 30,
+  contractRewardMax: 50,
+  contractRequired: 3,
+  relayCost: 500,
+  relayIncome: 0.10,
+  thermalCost: 5000,
+  realSatelliteCost: 150000,
+};
+
+export const RELAY_COST = BALANCE.relayCost;
+export const RELAY_INCOME = BALANCE.relayIncome;
+
+export const STORY_STAGES = {
+  FIRST50: 'first50',
+  CONTRACTS: 'contracts',
+  RELAY: 'relay',
+  AFTER_RELAY: 'after_relay',
+};
 
 export const EARTH_RADIUS_KM = 6371;
 
@@ -58,7 +78,7 @@ export const SATELLITE_SPECS = {
       power: '—',
       note: 'Принимает и передаёт данные между аппаратами и наземными станциями.',
     },
-    note: 'Передаёт данные и приносит пассивный доход +$0.05/сек. На рекомендованной орбите 35 786 км / 0° висит над одной точкой экватора; регион выбирается при покупке. В тени расходует заряд.',
+    note: 'Передаёт данные и приносит пассивный доход +$0.10/сек. На рекомендованной орбите 35 786 км / 0° висит над одной точкой экватора; регион выбирается при покупке. В тени расходует заряд.',
   },
 };
 
@@ -90,11 +110,31 @@ export class Game {
       ],
       selectedId: 'mapper-1',
       contract: this.newContractData(),
-      stats: { clicks: 0, shots: 0, contracts: 0 },
+      story: this.defaultStory(),
+      stats: this.defaultStats(),
     };
   }
 
-  newContractData() {
+  defaultStory() {
+    return {
+      stage: STORY_STAGES.FIRST50,
+      contractsUnlocked: false,
+      relayUnlocked: false,
+      relayPurchased: false,
+    };
+  }
+
+  defaultStats() {
+    return {
+      clicks: 0,
+      shots: 0,
+      contracts: 0,
+      totalEarned: 0,
+      playSeconds: 0,
+    };
+  }
+
+  newContractData(options = {}) {
     const titles = [
       'Картографирование сектора',
       'Съёмка побережья',
@@ -108,10 +148,45 @@ export class Game {
       title: titles[Math.floor(Math.random() * titles.length)],
       lat: Math.round(lat * 10) / 10,
       lon: Math.round(lon * 10) / 10,
-      required: 1,
+      required: BALANCE.contractRequired,
       shots: 0,
-      reward: 10,
+      reward: options.first
+        ? 40
+        : BALANCE.contractRewardMin
+          + Math.floor(Math.random() * (BALANCE.contractRewardMax - BALANCE.contractRewardMin + 1)),
     };
+  }
+
+  checkStory() {
+    let changed = false;
+    for (let guard = 0; guard < 4; guard += 1) {
+      const story = this.state.story;
+      if (story.stage === STORY_STAGES.FIRST50 && this.state.balance >= BALANCE.firstGoal) {
+        story.stage = STORY_STAGES.CONTRACTS;
+        story.contractsUnlocked = true;
+        this.state.contract = this.newContractData({ first: true });
+        changed = true;
+        continue;
+      }
+      if (story.stage === STORY_STAGES.CONTRACTS && this.state.balance >= BALANCE.relayGoal) {
+        story.stage = STORY_STAGES.RELAY;
+        story.relayUnlocked = true;
+        changed = true;
+        continue;
+      }
+      break;
+    }
+    return changed;
+  }
+
+  addMoney(amount) {
+    const value = Math.max(0, Number(amount) || 0);
+    if (!value) return;
+    this.state.balance += value;
+    this.state.stats.totalEarned += value;
+    this.checkStory();
+    this.emit();
+    this.save();
   }
 
   subscribe(fn) {
@@ -152,6 +227,7 @@ export class Game {
     if (this.state.actionClicks >= CLICKS_PER_DOLLAR) {
       this.state.actionClicks = 0;
       this.state.balance += 1;
+      this.state.stats.totalEarned += 1;
       earned = 1;
     }
 
@@ -160,20 +236,23 @@ export class Game {
     let completed = null;
 
     const c = this.state.contract;
+    const contractUnlocked = Boolean(this.state.story?.contractsUnlocked);
     const overZone = angleToContract !== null && angleToContract <= CONTRACT_ANGLE;
-    if (c && c.shots < c.required && overZone) {
+    if (contractUnlocked && c && c.shots < c.required && overZone) {
       shot = true;
       c.shots += 1;
       this.state.stats.shots += 1;
       if (c.shots >= c.required) {
         completed = { ...c };
         this.state.balance += c.reward;
+        this.state.stats.totalEarned += c.reward;
         this.state.stats.contracts += 1;
         this.state.contract = this.newContractData();
         contractDone = true;
       }
     }
 
+    this.checkStory();
     this.emit();
     this.save();
     return {
@@ -189,6 +268,7 @@ export class Game {
 
   update(dt, sunlitById = {}) {
     let changed = false;
+    this.state.stats.playSeconds += dt;
 
     for (const sat of this.state.satellites) {
       const sunlit = sunlitById[sat.id] !== false;
@@ -200,14 +280,23 @@ export class Game {
     }
 
     if (this.state.incomePerSec > 0) {
-      this.state.balance += this.state.incomePerSec * dt;
+      const income = this.state.incomePerSec * dt;
+      this.state.balance += income;
+      this.state.stats.totalEarned += income;
       changed = true;
     }
 
-    if (changed) this.emit();
+    const storyChanged = this.checkStory();
+    if (changed || storyChanged) this.emit();
   }
 
   buyRelay() {
+    if (!this.state.story.relayUnlocked) {
+      return { ok: false, reason: 'Друг ещё не договорился о связи' };
+    }
+    if (this.state.story.relayPurchased) {
+      return { ok: false, reason: 'Друг помог со связью только один раз' };
+    }
     if (this.state.balance < RELAY_COST) {
       return { ok: false, reason: `Нужно $${RELAY_COST}` };
     }
@@ -223,6 +312,8 @@ export class Game {
     };
     this.state.satellites.push(sat);
     this.state.incomePerSec = Math.round((this.state.incomePerSec + RELAY_INCOME) * 100) / 100;
+    this.state.story.relayPurchased = true;
+    this.state.story.stage = STORY_STAGES.AFTER_RELAY;
     this.state.selectedId = sat.id;
     for (const s of this.state.satellites) s.selected = s.id === sat.id;
     this.emit();
@@ -268,7 +359,10 @@ export class Game {
       if (!data || data.version !== 1) return;
       if (!Array.isArray(data.satellites) || data.satellites.length === 0) return;
       if (!data.contract) data.contract = this.newContractData();
+      const hadStory = Boolean(data.story);
       this.state = Object.assign(this.defaultState(), data);
+      this.state.story = Object.assign(this.defaultStory(), data.story || {});
+      this.state.stats = Object.assign(this.defaultStats(), data.stats || {});
       if (!this.state.satellites.some(s => s.id === this.state.selectedId)) {
         this.state.selectedId = this.state.satellites[0].id;
       }
@@ -280,6 +374,23 @@ export class Game {
           s.orbit.longitudeDeg = (RECOMMENDED_ORBITS[s.type] || RECOMMENDED_ORBITS.mapper).longitudeDeg;
         }
       }
+
+      const hasRelay = this.state.satellites.some(s => s.type === 'relay');
+      if (hasRelay) {
+        this.state.story.contractsUnlocked = true;
+        this.state.story.relayUnlocked = true;
+        this.state.story.relayPurchased = true;
+        this.state.story.stage = STORY_STAGES.AFTER_RELAY;
+      } else if (this.state.story.stage === STORY_STAGES.AFTER_RELAY) {
+        this.state.story.stage = STORY_STAGES.CONTRACTS;
+        this.state.story.contractsUnlocked = true;
+      } else if (!hadStory && this.state.stats.contracts > 0) {
+        this.state.story.stage = STORY_STAGES.CONTRACTS;
+        this.state.story.contractsUnlocked = true;
+        this.state.contract = this.newContractData({ first: true });
+      }
+
+      this.checkStory();
     } catch (e) {
       // битое сохранение — начинаем заново
     }

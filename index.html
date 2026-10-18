@@ -46,12 +46,28 @@
         <button id="btn-close-contract" class="contract-close" type="button" aria-label="Закрыть задание">×</button>
         <div class="contract-head">
           <span id="contract-title">Контракт</span>
-          <span id="contract-reward" class="reward">$10</span>
+          <span id="contract-reward" class="reward">$40</span>
         </div>
         <div id="contract-desc" class="contract-desc">Снимите указанную область, когда спутник проходит над ней.</div>
         <div class="contract-meta">
-          <span id="contract-shots">0/1 снимок</span>
+          <span id="contract-shots">0/3 снимка</span>
           <span id="contract-zone">следите за орбитой</span>
+        </div>
+      </div>
+
+      <div id="story-card" class="story-card" aria-label="Сообщение друга">
+        <img id="story-avatar" class="story-avatar" src="./assets/images/friend.webp" alt="Друг">
+        <div class="story-body">
+          <div class="story-head">
+            <strong>Друг</strong>
+            <span id="story-tag" class="story-tag">На связи</span>
+          </div>
+          <p id="story-text">Накопи $50 ручной работой — потом я договорюсь о первых заказах.</p>
+          <div class="story-progress"><i id="story-progress-fill"></i></div>
+          <div class="story-meta">
+            <span id="story-goal">Цель: $50</span>
+            <span id="story-metrics">$0 · 00:00</span>
+          </div>
         </div>
       </div>
     </div>
@@ -85,6 +101,9 @@
     <button id="dev-speed-2" class="dev-btn" type="button" title="Ускорение времени ×2">×2</button>
     <button id="dev-speed-5" class="dev-btn" type="button" title="Ускорение времени ×5">×5</button>
     <button id="dev-pause" class="dev-btn" type="button" title="Пауза">⏸</button>
+    <button id="dev-money-50" class="dev-btn" type="button" title="Добавить $50">+$50</button>
+    <button id="dev-money-500" class="dev-btn" type="button" title="Добавить $500">+$500</button>
+    <button id="dev-reset" class="dev-btn" type="button" title="Сбросить прогресс">↺</button>
   </div>
 
   <section id="panel-satellites" class="panel" aria-label="Спутники">
@@ -109,9 +128,25 @@
         <div class="shop-ico">📡</div>
         <div class="shop-info">
           <h3>Спутник связи</h3>
-          <p>Пассивный доход +$0.05/сек. Работает без ручных команд.</p>
+          <p id="relay-card-desc">Друг обещал помочь с выводом после $500.</p>
         </div>
-        <button id="btn-buy-relay" class="buy-btn" type="button">$25</button>
+        <button id="btn-buy-relay" class="buy-btn" type="button">Закрыто</button>
+      </article>
+      <article id="shop-thermal-card" class="shop-card muted" hidden>
+        <div class="shop-ico">🌡</div>
+        <div class="shop-info">
+          <h3>Старый тепловизор</h3>
+          <p>По заданию друга — $5 000. Ручной режим приносит больше денег.</p>
+        </div>
+        <button class="buy-btn" type="button" disabled>по заданию</button>
+      </article>
+      <article id="shop-real-card" class="shop-card muted" hidden>
+        <div class="shop-ico">🛰</div>
+        <div class="shop-info">
+          <h3>Реальный спутник</h3>
+          <p>Настоящая цена начинается от $150 000. Это уже не халява.</p>
+        </div>
+        <button class="buy-btn" type="button" disabled>$150 000</button>
       </article>
       <article class="shop-card muted">
         <div class="shop-ico">🧠</div>

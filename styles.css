@@ -64,6 +64,10 @@ html, body {
   gap: 8px;
 }
 
+.hud-btn[hidden] {
+  display: none;
+}
+
 .hud-btn {
   pointer-events: auto;
   display: flex;
@@ -152,6 +156,89 @@ html, body {
   line-height: 1;
   padding: 4px 6px;
   cursor: pointer;
+}
+
+.story-card {
+  display: flex;
+  align-self: flex-start;
+  gap: 10px;
+  width: min(390px, calc(100vw - 28px));
+  margin-top: 8px;
+  padding: 9px;
+  border: 1px solid rgba(143, 211, 255, 0.25);
+  border-radius: 16px;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.story-avatar {
+  flex: 0 0 auto;
+  width: 78px;
+  height: 104px;
+  border-radius: 12px;
+  object-fit: cover;
+  object-position: center top;
+  background: rgba(140, 190, 255, 0.08);
+}
+
+.story-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.story-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.story-head strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.story-tag {
+  color: var(--accent);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.story-body p {
+  margin: 4px 0 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.story-progress {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(140, 190, 255, 0.14);
+  overflow: hidden;
+}
+
+.story-progress i {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5ec8ff, #59f2b2);
+  transition: width 0.15s linear;
+}
+
+.story-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--muted);
 }
 
 .contract-head {
@@ -727,6 +814,10 @@ html, body {
   background: rgba(140, 190, 255, 0.05);
 }
 
+.shop-card[hidden] {
+  display: none;
+}
+
 .shop-card.muted { opacity: 0.55; }
 .shop-ico { font-size: 24px; text-align: center; }
 .shop-info h3 { margin: 0 0 3px; font-size: 14px; }
@@ -765,8 +856,10 @@ html, body {
   top: 56px;
   right: 14px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  max-width: min(380px, calc(100vw - 28px));
   padding: 4px 6px;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -871,6 +964,10 @@ html, body {
   .action-meter { width: 46vw; }
   .contract-card { width: calc(100vw - 20px); max-height: 160px; overflow: auto; }
   .left-stack { gap: 6px; }
+  .story-card { width: calc(100vw - 20px); padding: 8px; gap: 8px; }
+  .story-avatar { width: 64px; height: 86px; }
+  .story-body p { font-size: 10px; }
+  .story-meta { font-size: 8px; }
   .big-btn { padding: 11px 8px; font-size: 14px; }
   .panel { right: 10px; bottom: 88px; width: calc(100vw - 20px); }
   .dev-panel {
@@ -878,8 +975,10 @@ html, body {
   top: 56px;
   right: 14px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  max-width: min(380px, calc(100vw - 28px));
   padding: 4px 6px;
   border: 1px solid var(--line);
   border-radius: 12px;
