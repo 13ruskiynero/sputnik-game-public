@@ -31,11 +31,17 @@ function orbitOf(sat) {
 function orbitLabelFor(orbit) {
   const inclination = Math.abs(orbit.inclinationDeg);
   if (inclination >= 80) return 'Полярная';
-  if (inclination <= 5) return orbit.altitudeKm >= 30000 ? 'Геостационарная' : 'Экваториальная';
+  if (Math.abs(orbit.altitudeKm - GEO_ALTITUDE_KM) <= 50) {
+    return inclination <= 0.5 ? 'Геостационарная' : 'Геосинхронная';
+  }
+  if (inclination <= 5) {
+    return orbit.altitudeKm >= 30000 ? 'Высокая экваториальная' : 'Экваториальная';
+  }
   return 'Наклонная';
 }
 
 const EARTH_MU = 398600.4418;
+const GEO_ALTITUDE_KM = 35786;
 
 function orbitalNumbers(altitudeKm) {
   const radius = EARTH_RADIUS_KM + altitudeKm;

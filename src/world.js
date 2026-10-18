@@ -37,6 +37,15 @@ function speedForRadius(radius) {
   return ORBIT_REF_SPEED * Math.pow(LEO_REF_RADIUS / radius, 1.5);
 }
 
+// Геостационарная высота: угловая скорость должна совпадать с вращением
+// планеты, иначе аппарат будет медленно уезжать относительно поверхности.
+// При наклонении 0 он висит над одной точкой экватора, при наклонении
+// больше 0 — геосинхронная «восьмёрка».
+function angularSpeedForOrbit(altitudeKm, radius) {
+  if (Math.abs(altitudeKm - GEO_REF_KM) <= 50) return AUTO_SPIN;
+  return speedForRadius(radius);
+}
+
 function orbitForSatellite(sat) {
   const recommended = RECOMMENDED_ORBITS[sat.type] || RECOMMENDED_ORBITS.mapper;
   const orbit = sat.orbit || recommended;
@@ -361,7 +370,7 @@ export function createWorld(canvas, onSelect) {
     const isRelay = sat.type === 'relay';
     const orbit = orbitForSatellite(sat);
     const radius = visualRadiusForAltitude(orbit.altitudeKm);
-    const speed = speedForRadius(radius);
+    const speed = angularSpeedForOrbit(orbit.altitudeKm, radius);
     const inclination = THREE.MathUtils.degToRad(orbit.inclinationDeg);
     const node = isRelay ? 0 : 0.28;
 
@@ -394,7 +403,7 @@ export function createWorld(canvas, onSelect) {
     mesh.add(ring);
 
     orbitGroup.add(mesh);
-    satellites.set(sat.id, { mesh, orbitGroup, orbitLine, radius, speed, phase, ring, type: sat.type });
+    satellites.set(sat.id, { mesh, orbitGroup, orbitLine, radius, speed, phase, ring, type: sat.type, altitudeKm: orbit.altitudeKm });
   }
 
   function updateSatelliteOrbit(id, orbit) {
@@ -403,10 +412,11 @@ export function createWorld(canvas, onSelect) {
     const altitude = Math.max(ORBIT_MIN_KM, Math.min(ORBIT_MAX_KM, Number(orbit.altitudeKm) || LEO_REF_KM));
     const inclination = Math.max(0, Math.min(180, Number(orbit.inclinationDeg) || 0));
     const radius = visualRadiusForAltitude(altitude);
-    const speed = speedForRadius(radius);
+    const speed = angularSpeedForOrbit(altitude, radius);
 
     entry.radius = radius;
     entry.speed = speed;
+    entry.altitudeKm = altitude;
     entry.orbitGroup.rotation.x = THREE.MathUtils.degToRad(inclination);
     entry.orbitGroup.rotation.y = entry.type === 'relay' ? 0 : 0.28;
 
@@ -966,10 +976,14 @@ export function createWorld(canvas, onSelect) {
         radius: entry.radius,
         distance: entry.radius,
         altitude: entry.radius - EARTH_RADIUS,
+        altitudeKm: entry.altitudeKm,
         periodSec: (Math.PI * 2) / Math.abs(entry.speed),
         speed: entry.speed,
+        angularSpeed: entry.speed,
         inclinationDeg: THREE.MathUtils.radToDeg(entry.orbitGroup.rotation.x),
         nodeDeg: THREE.MathUtils.radToDeg(entry.orbitGroup.rotation.y),
+        geostationary: Math.abs(entry.altitudeKm - GEO_REF_KM) <= 50
+          && Math.abs(THREE.MathUtils.radToDeg(entry.orbitGroup.rotation.x)) < 0.5,
       };
     },
     getSatelliteLocalPosition(id) {
