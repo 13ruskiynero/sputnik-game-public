@@ -255,24 +255,28 @@ function createSatelliteMaterials() {
 
 function addSolarWing(group, side, mats) {
   const wing = new THREE.Group();
+  const assembly = new THREE.Group();
+  assembly.position.x = side * 0.34;
+  assembly.userData.isSolarPanelAssembly = true;
 
   const panel = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.022, 0.18), mats.solar);
-  panel.position.x = side * 0.34;
-  wing.add(panel);
+  assembly.add(panel);
 
   const railX = new THREE.BoxGeometry(0.43, 0.014, 0.014);
   for (const z of [-0.09, 0.09]) {
     const rail = new THREE.Mesh(railX, mats.frame);
-    rail.position.set(side * 0.34, 0.016, z);
-    wing.add(rail);
+    rail.position.set(0, 0.016, z);
+    assembly.add(rail);
   }
 
   const railZ = new THREE.BoxGeometry(0.014, 0.028, 0.19);
   for (const dx of [-0.21, 0.21]) {
     const rail = new THREE.Mesh(railZ, mats.frame);
-    rail.position.set(side * (0.34 + dx), 0, 0);
-    wing.add(rail);
+    rail.position.set(dx, 0, 0);
+    assembly.add(rail);
   }
+
+  wing.add(assembly);
 
   const boom = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.012, 0.014), mats.gold);
   boom.position.set(side * 0.19, 0, 0);
@@ -284,6 +288,7 @@ function addSolarWing(group, side, mats) {
   wing.add(hinge);
 
   group.add(wing);
+  return assembly;
 }
 
 function buildSatelliteMesh(type) {
@@ -372,7 +377,10 @@ function buildSatelliteMesh(type) {
     group.add(sensor);
   }
 
-  for (const x of [-1, 1]) addSolarWing(group, x, mats);
+  const solarPanels = [];
+  for (const x of [-1, 1]) solarPanels.push(addSolarWing(group, x, mats));
+
+  group.userData.solarPanels = solarPanels;
 
   const greebleGeo = new THREE.BoxGeometry(0.028, 0.024, 0.032);
   for (const x of [-0.08, 0.08]) {
@@ -589,6 +597,25 @@ export function createWorld(canvas, onSelect) {
   sunSprite.position.copy(sunDir).multiplyScalar(SUN_DISTANCE);
   sunSprite.scale.setScalar(SUN_SPRITE_SCALE);
   scene.add(sunSprite);
+
+  const solarUp = new THREE.Vector3(0, 1, 0);
+  const solarPanelWorld = new THREE.Vector3();
+  const solarPanelDirection = new THREE.Vector3();
+  const solarParentQuaternion = new THREE.Quaternion();
+  const solarTargetQuaternion = new THREE.Quaternion();
+
+  function aimSolarPanels(mesh) {
+    const panels = mesh.userData.solarPanels || [];
+    for (const panel of panels) {
+      panel.getWorldPosition(solarPanelWorld);
+      solarPanelDirection.copy(sunSprite.position).sub(solarPanelWorld).normalize();
+      panel.parent.getWorldQuaternion(solarParentQuaternion);
+      solarParentQuaternion.invert();
+      solarPanelDirection.applyQuaternion(solarParentQuaternion);
+      solarTargetQuaternion.setFromUnitVectors(solarUp, solarPanelDirection);
+      panel.quaternion.copy(solarTargetQuaternion);
+    }
+  }
 
   // Земля.
   const earthGroup = new THREE.Group();
@@ -996,6 +1023,7 @@ export function createWorld(canvas, onSelect) {
         0,
         Math.sin(entry.phase) * entry.radius
       );
+      aimSolarPanels(entry.mesh);
       if (entry.ring.visible) {
         entry.ring.lookAt(camera.position);
         entry.ring.scale.setScalar(1 + 0.08 * Math.sin(elapsed * 4));
@@ -1326,6 +1354,19 @@ export function createWorld(canvas, onSelect) {
     setContract,
     getAngleToContract,
     getContractAngles,
+    getSolarPanelDirections() {
+      const result = [];
+      for (const [id, entry] of satellites) {
+        const panels = entry.mesh.userData.solarPanels || [];
+        for (const panel of panels) {
+          const quaternion = new THREE.Quaternion();
+          panel.getWorldQuaternion(quaternion);
+          const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
+          result.push({ id, dot: normal.dot(sunDir) });
+        }
+      }
+      return result;
+    },
     getSunlitMap,
     isPointSunlit(x, y, z, sunDirection = null) {
       const position = new THREE.Vector3(x, y, z);
@@ -1431,6 +1472,7 @@ export function createWorld(canvas, onSelect) {
         altitudeKm: entry.altitudeKm,
         longitudeDeg: entry.longitudeDeg,
         visualScale: entry.mesh.scale.x,
+        solarPanels: entry.mesh.userData.solarPanels?.length || 0,
         periodSec: (Math.PI * 2) / Math.abs(entry.speed),
         speed: entry.speed,
         angularSpeed: entry.speed,
