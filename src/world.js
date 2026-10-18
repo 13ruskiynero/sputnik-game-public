@@ -384,7 +384,9 @@ export function createWorld(canvas, onSelect) {
     orbitGroup.add(orbitLine);
 
     const mesh = buildSatelliteMesh(sat.type);
-    mesh.scale.setScalar(1.3 * Math.max(1, radius / LEO_REF_RADIUS));
+    // Размер аппарата не зависит от высоты орбиты: связь не должна
+    // выглядеть гигантской рядом с картографом.
+    mesh.scale.setScalar(1.3);
     const phase = isRelay
       ? -earthSpinGroup.rotation.y - THREE.MathUtils.degToRad(orbit.longitudeDeg)
       : index * 2.1;
@@ -440,7 +442,7 @@ export function createWorld(canvas, onSelect) {
       0,
       Math.sin(entry.phase) * radius
     );
-    entry.mesh.scale.setScalar(1.3 * Math.max(1, radius / LEO_REF_RADIUS));
+    entry.mesh.scale.setScalar(1.3);
     return true;
   }
 
@@ -1037,6 +1039,7 @@ export function createWorld(canvas, onSelect) {
         altitude: entry.radius - EARTH_RADIUS,
         altitudeKm: entry.altitudeKm,
         longitudeDeg: entry.longitudeDeg,
+        visualScale: entry.mesh.scale.x,
         periodSec: (Math.PI * 2) / Math.abs(entry.speed),
         speed: entry.speed,
         angularSpeed: entry.speed,
