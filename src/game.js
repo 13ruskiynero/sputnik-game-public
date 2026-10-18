@@ -10,23 +10,39 @@ export const CONTRACT_ANGLE = 0.42; // ~24 градуса
 export const RELAY_COST = 25;
 export const RELAY_INCOME = 0.05;
 
+export const EARTH_RADIUS_KM = 6371;
+
 export const SATELLITE_SPECS = {
   mapper: {
     kind: 'Картограф',
     role: 'Картографирование поверхности',
-    instrument: 'Оптическая камера',
     orbitLabel: 'Полярная',
-    resolution: 'Низкое',
-    fovDeg: 16,
+    altitudeKm: 550,
+    instrument: {
+      name: 'Оптическая камера',
+      kind: 'Оптическая съёмка',
+      resolution: 'Низкое · ~250 м/пиксель',
+      fov: '±16°',
+      channels: 'Видимый диапазон',
+      power: '2 энергии за снимок',
+      note: 'Снимает поверхность в видимом диапазоне. Качество зависит от освещения и облачности.',
+    },
     note: 'Снимает участки поверхности. Для снимка нужен пролёт над зоной контракта.',
   },
   relay: {
     kind: 'Связь',
     role: 'Связь и ретрансляция',
-    instrument: 'Антенна и ретранслятор',
     orbitLabel: 'Наклонная низкая',
-    resolution: '—',
-    fovDeg: null,
+    altitudeKm: 800,
+    instrument: {
+      name: 'Антенна и ретранслятор',
+      kind: 'Связь',
+      resolution: '—',
+      fov: '—',
+      channels: 'Радиоканал',
+      power: '—',
+      note: 'Принимает и передаёт данные между аппаратами и наземными станциями.',
+    },
     note: 'Передаёт данные и приносит пассивный доход +$0.05/сек. В тени расходует заряд.',
   },
 };

@@ -412,6 +412,64 @@ html, body {
   display: none;
 }
 
+.sat-sheet {
+  position: fixed;
+  left: 50%;
+  bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(760px, calc(100vw - 20px));
+  height: 50vh;
+  max-height: 50vh;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--glass-strong);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  z-index: 18;
+}
+
+.sat-sheet[hidden] {
+  display: none;
+}
+
+.sheet-close {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.inline-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-btn span:last-child {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .back-btn {
   display: inline-flex;
   align-items: center;
@@ -614,7 +672,14 @@ html, body {
   .energy-hud { padding: 6px 10px; gap: 7px; }
   .energy-label { font-size: 10px; }
   .energy-value { font-size: 10px; min-width: 32px; }
-  .sat-detail-facts { grid-template-columns: 1fr; }
+  .sat-sheet {
+    bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 20px);
+    padding: 12px;
+  }
+  .sat-detail-facts { gap: 6px; }
+  .sat-detail-facts div { padding: 7px 8px; }
+  .sat-detail-facts dd { font-size: 11px; }
 }
 
 .toasts {
@@ -720,7 +785,14 @@ html, body {
   .energy-hud { padding: 6px 10px; gap: 7px; }
   .energy-label { font-size: 10px; }
   .energy-value { font-size: 10px; min-width: 32px; }
-  .sat-detail-facts { grid-template-columns: 1fr; }
+  .sat-sheet {
+    bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 20px);
+    padding: 12px;
+  }
+  .sat-detail-facts { gap: 6px; }
+  .sat-detail-facts div { padding: 7px 8px; }
+  .sat-detail-facts dd { font-size: 11px; }
 }
 
 .toasts { bottom: 96px; }

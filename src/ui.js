@@ -1,4 +1,4 @@
-import { ACTION_ENERGY_COST, CLICKS_PER_DOLLAR, CONTRACT_ANGLE, RELAY_COST, SATELLITE_SPECS } from './game.js';
+import { ACTION_ENERGY_COST, CLICKS_PER_DOLLAR, CONTRACT_ANGLE, EARTH_RADIUS_KM, RELAY_COST, SATELLITE_SPECS } from './game.js';
 
 function formatMoney(value) {
   if (!Number.isFinite(value)) return '$0';
@@ -39,9 +39,13 @@ export class UI {
       contractZone: $('contract-zone'),
       contractCard: $('contract-card'),
       btnSatellites: $('btn-satellites'),
-      satListView: $('sat-list-view'),
+      satSheet: $('sat-sheet'),
       satDetail: $('sat-detail'),
+      instrumentDetail: $('instrument-detail'),
       btnSatBack: $('btn-sat-back'),
+      btnSatSheetClose: $('btn-sat-sheet-close'),
+      btnSatInstrument: $('btn-sat-instrument'),
+      btnInstrumentBack: $('btn-instrument-back'),
       satDetailName: $('sat-detail-name'),
       satDetailSubtitle: $('sat-detail-subtitle'),
       satDetailEnergy: $('sat-detail-energy'),
@@ -52,10 +56,16 @@ export class UI {
       satDetailDistance: $('sat-detail-distance'),
       satDetailAltitude: $('sat-detail-altitude'),
       satDetailPeriod: $('sat-detail-period'),
-      satDetailResolution: $('sat-detail-resolution'),
-      satDetailFov: $('sat-detail-fov'),
       satDetailSpeed: $('sat-detail-speed'),
       satDetailNote: $('sat-detail-note'),
+      instrumentName: $('instrument-name'),
+      instrumentSubtitle: $('instrument-subtitle'),
+      instrumentKind: $('instrument-kind'),
+      instrumentResolution: $('instrument-resolution'),
+      instrumentFov: $('instrument-fov'),
+      instrumentChannels: $('instrument-channels'),
+      instrumentPower: $('instrument-power'),
+      instrumentNote: $('instrument-note'),
       btnTasks: $('btn-tasks'),
       btnCloseContract: $('btn-close-contract'),
       btnShop: $('btn-shop'),
@@ -78,7 +88,10 @@ export class UI {
 
   bind() {
     this.el.btnSatellites.addEventListener('click', () => this.togglePanel('panel-satellites'));
-    if (this.el.btnSatBack) this.el.btnSatBack.addEventListener('click', () => this.showSatList());
+    if (this.el.btnSatBack) this.el.btnSatBack.addEventListener('click', () => this.backToSatList());
+    if (this.el.btnSatSheetClose) this.el.btnSatSheetClose.addEventListener('click', () => this.hideSatSheet());
+    if (this.el.btnSatInstrument) this.el.btnSatInstrument.addEventListener('click', () => this.showInstrument());
+    if (this.el.btnInstrumentBack) this.el.btnInstrumentBack.addEventListener('click', () => this.showSatelliteView());
     this.el.btnTasks.addEventListener('click', () => this.el.contractCard.classList.toggle('open'));
     this.el.btnCloseContract.addEventListener('click', () => this.el.contractCard.classList.remove('open'));
     this.el.btnShop.addEventListener('click', () => this.togglePanel('panel-shop'));
@@ -195,26 +208,49 @@ export class UI {
     }
   }
 
-  showSatList() {
+  hideSatSheet() {
     this._detailId = null;
-    if (this.el.satListView) this.el.satListView.hidden = false;
-    if (this.el.satDetail) this.el.satDetail.hidden = true;
+    if (this.el.satSheet) this.el.satSheet.hidden = true;
+    if (this.el.satDetail) this.el.satDetail.hidden = false;
+    if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+  }
+
+  backToSatList() {
+    this.hideSatSheet();
+    this.togglePanel('panel-satellites');
   }
 
   showSatDetail(id) {
     const sat = this.game.state.satellites.find(s => s.id === id);
-    if (!sat || !this.el.satDetail || !this.el.satListView) return;
+    if (!sat || !this.el.satSheet) return;
+    this.closePanels();
     this._detailId = id;
+    if (this.el.satDetail) this.el.satDetail.hidden = false;
+    if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+    this.el.satSheet.hidden = false;
     this.renderSatDetail(id);
-    this.el.satListView.hidden = true;
-    this.el.satDetail.hidden = false;
+  }
+
+  showSatelliteView() {
+    if (!this._detailId || !this.el.satSheet) return;
+    if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+    if (this.el.satDetail) this.el.satDetail.hidden = false;
+    this.renderSatDetail(this._detailId);
+  }
+
+  showInstrument() {
+    const sat = this.game.state.satellites.find(s => s.id === this._detailId);
+    if (!sat || !this.el.satSheet) return;
+    this.renderInstrument(sat);
+    if (this.el.satDetail) this.el.satDetail.hidden = true;
+    if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = false;
   }
 
   renderSatDetail(id) {
     if (!this.el.satDetailName) return;
     const sat = this.game.state.satellites.find(s => s.id === id);
     if (!sat) {
-      this.showSatList();
+      this.hideSatSheet();
       return;
     }
     const spec = SATELLITE_SPECS[sat.type] || {};
@@ -223,6 +259,9 @@ export class UI {
     const inclination = Number.isFinite(info.inclinationDeg)
       ? Math.abs(info.inclinationDeg).toFixed(0) + '°'
       : null;
+    const altitudeKm = Number.isFinite(spec.altitudeKm) ? spec.altitudeKm : null;
+    const distanceKm = altitudeKm != null ? EARTH_RADIUS_KM + altitudeKm : null;
+    const instrument = spec.instrument || {};
 
     this.el.satDetailName.textContent = sat.name;
     this.el.satDetailSubtitle.textContent =
@@ -231,24 +270,37 @@ export class UI {
     this.el.satDetailEnergyFill.style.width = energy + '%';
     this.el.satDetailEnergyFill.classList.toggle('low', energy < 20);
     this.el.satDetailWork.textContent = spec.role || '—';
-    this.el.satDetailInstrument.textContent = spec.instrument || '—';
+    this.el.satDetailInstrument.textContent = instrument.name || '—';
     this.el.satDetailOrbit.textContent =
       [spec.orbitLabel, inclination].filter(Boolean).join(' · ') || '—';
-    this.el.satDetailDistance.textContent = Number.isFinite(info.distance)
-      ? info.distance.toFixed(2) + ' ед. от центра'
+    this.el.satDetailDistance.textContent = distanceKm != null
+      ? distanceKm.toLocaleString('ru-RU') + ' км от центра'
       : '—';
-    this.el.satDetailAltitude.textContent = Number.isFinite(info.altitude)
-      ? info.altitude.toFixed(2) + ' ед. над поверхностью'
+    this.el.satDetailAltitude.textContent = altitudeKm != null
+      ? altitudeKm.toLocaleString('ru-RU') + ' км над поверхностью'
       : '—';
     this.el.satDetailPeriod.textContent = Number.isFinite(info.periodSec)
       ? info.periodSec.toFixed(1) + ' с'
       : '—';
-    this.el.satDetailResolution.textContent = spec.resolution || '—';
-    this.el.satDetailFov.textContent = spec.fovDeg != null ? '±' + spec.fovDeg + '°' : '—';
     this.el.satDetailSpeed.textContent = Number.isFinite(info.speed)
       ? info.speed.toFixed(2) + ' рад/с'
       : '—';
     this.el.satDetailNote.textContent = spec.note || '';
+  }
+
+  renderInstrument(sat) {
+    if (!this.el.instrumentName) return;
+    const spec = SATELLITE_SPECS[sat.type] || {};
+    const instrument = spec.instrument || {};
+    this.el.instrumentName.textContent = instrument.name || '—';
+    this.el.instrumentSubtitle.textContent =
+      [instrument.kind, sat.name].filter(Boolean).join(' · ');
+    this.el.instrumentKind.textContent = instrument.kind || '—';
+    this.el.instrumentResolution.textContent = instrument.resolution || '—';
+    this.el.instrumentFov.textContent = instrument.fov || '—';
+    this.el.instrumentChannels.textContent = instrument.channels || '—';
+    this.el.instrumentPower.textContent = instrument.power || '—';
+    this.el.instrumentNote.textContent = instrument.note || '';
   }
 
   togglePanel(id) {
@@ -257,8 +309,8 @@ export class UI {
     const willOpen = !target.classList.contains('open');
     for (const panel of this.el.panels) panel.classList.remove('open');
     if (willOpen) {
+      this.hideSatSheet();
       target.classList.add('open');
-      if (id === 'panel-satellites') this.showSatList();
     }
   }
 
@@ -369,8 +421,13 @@ export class UI {
     this.el.btnBuyRelay.classList.toggle('is-disabled', state.balance < RELAY_COST);
     this.el.btnBuyRelay.textContent = state.balance >= RELAY_COST ? '$' + RELAY_COST + ' — купить' : '$' + RELAY_COST;
 
-    if (this.el.satDetail && !this.el.satDetail.hidden && this._detailId) {
-      this.renderSatDetail(this._detailId);
+    if (this.el.satSheet && !this.el.satSheet.hidden && this._detailId) {
+      const exists = state.satellites.some(s => s.id === this._detailId);
+      if (!exists) {
+        this.hideSatSheet();
+      } else if (this.el.satDetail && !this.el.satDetail.hidden) {
+        this.renderSatDetail(this._detailId);
+      }
     }
   }
 
