@@ -55,21 +55,6 @@
         </div>
       </div>
 
-      <div id="story-card" class="story-card" aria-label="Сообщение друга">
-        <img id="story-avatar" class="story-avatar" src="./assets/images/friend.webp" alt="Друг">
-        <div class="story-body">
-          <div class="story-head">
-            <strong>Друг</strong>
-            <span id="story-tag" class="story-tag">На связи</span>
-          </div>
-          <p id="story-text">Накопи $50 ручной работой — потом я договорюсь о первых заказах.</p>
-          <div class="story-progress"><i id="story-progress-fill"></i></div>
-          <div class="story-meta">
-            <span id="story-goal">Цель: $50</span>
-            <span id="story-metrics">$0 · 00:00</span>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="bottom-stack">
@@ -93,6 +78,31 @@
           <small id="action-hint">Ручная работа</small>
         </button>
       </footer>
+    </div>
+  </div>
+
+  <div id="story-widget" class="story-widget">
+    <button id="story-collapsed" class="story-collapsed" type="button" aria-label="Открыть сообщение друга">
+      <img class="story-collapsed-avatar" src="./assets/images/friend.webp" alt="Друг">
+      <span class="story-collapsed-name">Друг</span>
+      <span id="story-badge" class="story-badge" aria-hidden="true"></span>
+    </button>
+
+    <div id="story-card" class="story-card" hidden aria-label="Сообщение друга">
+      <button id="btn-story-close" class="story-close" type="button" aria-label="Свернуть сообщение">×</button>
+      <img id="story-avatar" class="story-avatar" src="./assets/images/friend.webp" alt="Друг">
+      <div class="story-body">
+        <div class="story-head">
+          <strong>Друг</strong>
+          <span id="story-tag" class="story-tag">На связи</span>
+        </div>
+        <p id="story-text">Накопи $50 ручной работой — потом я договорюсь о первых заказах.</p>
+        <div class="story-progress"><i id="story-progress-fill"></i></div>
+        <div class="story-meta">
+          <span id="story-goal">Цель: $50</span>
+          <span id="story-metrics">$0 · 00:00</span>
+        </div>
+      </div>
     </div>
   </div>
 

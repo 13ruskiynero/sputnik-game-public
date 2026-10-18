@@ -130,6 +130,7 @@ html, body {
 .contract-card {
   display: none;
   position: relative;
+  z-index: 17;
   align-self: center;
   width: min(360px, calc(100vw - 28px));
   margin: 8px auto 0;
@@ -158,18 +159,85 @@ html, body {
   cursor: pointer;
 }
 
-.story-card {
+.story-widget {
+  position: fixed;
+  left: 14px;
+  top: 104px;
+  z-index: 10;
   display: flex;
-  align-self: flex-start;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.story-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 9px 4px 4px;
+  border: 1px solid rgba(143, 211, 255, 0.3);
+  border-radius: 13px;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.story-collapsed[hidden],
+.story-card[hidden],
+.story-badge[hidden] {
+  display: none;
+}
+
+.story-collapsed-avatar {
+  width: 34px;
+  height: 44px;
+  border-radius: 9px;
+  object-fit: cover;
+  object-position: center top;
+  background: rgba(140, 190, 255, 0.08);
+}
+
+.story-collapsed-name {
+  font-weight: 600;
+}
+
+.story-badge {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(89, 242, 178, 0.8);
+}
+
+.story-card {
+  position: relative;
+  display: flex;
   gap: 10px;
   width: min(390px, calc(100vw - 28px));
-  margin-top: 8px;
   padding: 9px;
   border: 1px solid rgba(143, 211, 255, 0.25);
   border-radius: 16px;
   background: var(--glass);
   backdrop-filter: blur(12px);
-  pointer-events: none;
+  pointer-events: auto;
+}
+
+.story-close {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
 }
 
 .story-avatar {
@@ -194,6 +262,7 @@ html, body {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+  padding-right: 18px;
   font-size: 12px;
 }
 
@@ -964,8 +1033,11 @@ html, body {
   .action-meter { width: 46vw; }
   .contract-card { width: calc(100vw - 20px); max-height: 160px; overflow: auto; }
   .left-stack { gap: 6px; }
+  .story-widget { left: 10px; top: 102px; }
   .story-card { width: calc(100vw - 20px); padding: 8px; gap: 8px; }
   .story-avatar { width: 64px; height: 86px; }
+  .story-collapsed-avatar { width: 30px; height: 40px; }
+  .story-collapsed { font-size: 11px; }
   .story-body p { font-size: 10px; }
   .story-meta { font-size: 8px; }
   .big-btn { padding: 11px 8px; font-size: 14px; }

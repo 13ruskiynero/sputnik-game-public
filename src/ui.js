@@ -98,6 +98,8 @@ export class UI {
     this._periodUnit = 'game';
     this._speedUnit = 'game';
     this._storyStage = null;
+    this._storyOpen = false;
+    this._storyUnread = true;
 
     const $ = id => document.getElementById(id);
     this.el = {
@@ -113,6 +115,10 @@ export class UI {
       contractZone: $('contract-zone'),
       contractCard: $('contract-card'),
       btnSatellites: $('btn-satellites'),
+      storyCard: $('story-card'),
+      storyCollapsed: $('story-collapsed'),
+      storyBadge: $('story-badge'),
+      btnStoryClose: $('btn-story-close'),
       storyText: $('story-text'),
       storyTag: $('story-tag'),
       storyGoal: $('story-goal'),
@@ -218,6 +224,12 @@ export class UI {
     if (this.el.orbitAltitude) this.el.orbitAltitude.addEventListener('input', () => this.onOrbitInput());
     if (this.el.orbitInclination) this.el.orbitInclination.addEventListener('input', () => this.onOrbitInput());
     if (this.el.orbitLongitude) this.el.orbitLongitude.addEventListener('input', () => this.onOrbitInput());
+    if (this.el.storyCollapsed) {
+      this.el.storyCollapsed.addEventListener('click', () => this.openStory());
+    }
+    if (this.el.btnStoryClose) {
+      this.el.btnStoryClose.addEventListener('click', () => this.closeStory());
+    }
     this.el.btnTasks.addEventListener('click', () => this.el.contractCard.classList.toggle('open'));
     this.el.btnCloseContract.addEventListener('click', () => this.el.contractCard.classList.remove('open'));
     this.el.btnShop.addEventListener('click', () => this.togglePanel('panel-shop'));
@@ -258,13 +270,39 @@ export class UI {
     this.toast('DEV: +$' + amount, 'money');
   }
 
+  openStory() {
+    this._storyOpen = true;
+    this._storyUnread = false;
+    this.updateStoryVisibility();
+  }
+
+  closeStory() {
+    this._storyOpen = false;
+    this._storyUnread = false;
+    this.updateStoryVisibility();
+  }
+
+  updateStoryVisibility() {
+    if (this.el.storyCollapsed) {
+      this.el.storyCollapsed.hidden = this._storyOpen;
+      this.el.storyCollapsed.setAttribute('aria-expanded', String(this._storyOpen));
+    }
+    if (this.el.storyCard) this.el.storyCard.hidden = !this._storyOpen;
+    if (this.el.storyBadge) {
+      this.el.storyBadge.hidden = !this._storyUnread || this._storyOpen;
+    }
+  }
+
   resetProgress() {
+    this._storyOpen = false;
+    this._storyUnread = true;
     this.game.reset();
     this.time.scale = 1;
     this.time.paused = false;
     this.hideSatSheet();
     this.closePanels();
     this.updateDevButtons();
+    this.updateStoryVisibility();
     this.toast('Прогресс сброшен', 'warn');
   }
 
@@ -759,11 +797,13 @@ export class UI {
     }
 
     if (this._storyStage && this._storyStage !== stage) {
+      if (!this._storyOpen) this._storyUnread = true;
       if (stage === STORY_STAGES.CONTRACTS) this.toast('Друг: контракты открыты', 'ok');
       if (stage === STORY_STAGES.RELAY) this.toast('Друг: связь доступна за $500', 'money');
       if (stage === STORY_STAGES.AFTER_RELAY) this.toast('Друг: связь выведена', 'ok');
     }
     this._storyStage = stage;
+    this.updateStoryVisibility();
   }
 
   renderShop(state) {
