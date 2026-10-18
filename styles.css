@@ -285,6 +285,25 @@ html, body {
   color: var(--text);
 }
 
+.story-next {
+  align-self: flex-start;
+  margin: 1px 0 7px;
+  padding: 7px 12px;
+  border: 1px solid rgba(89, 242, 178, 0.45);
+  border-radius: 10px;
+  background: rgba(89, 242, 178, 0.12);
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.story-next[hidden],
+#story-progress[hidden] {
+  display: none;
+}
+
 .story-progress {
   height: 5px;
   border-radius: 999px;
@@ -466,6 +485,21 @@ html, body {
 
 .big-btn.pulse {
   animation: pulse 0.26s ease-out;
+}
+
+.big-btn.action.hint-pulse {
+  animation: story-action-hint 1.2s ease-in-out infinite;
+}
+
+@keyframes story-action-hint {
+  0%, 100% {
+    border-color: rgba(89, 242, 178, 0.55);
+    box-shadow: 0 0 18px rgba(89, 242, 178, 0.18);
+  }
+  50% {
+    border-color: rgba(89, 242, 178, 0.95);
+    box-shadow: 0 0 36px rgba(89, 242, 178, 0.42);
+  }
 }
 
 @keyframes pulse {

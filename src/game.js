@@ -24,6 +24,8 @@ export const RELAY_COST = BALANCE.relayCost;
 export const RELAY_INCOME = BALANCE.relayIncome;
 
 export const STORY_STAGES = {
+  INTRO: 'intro',
+  ACTION_HINT: 'action_hint',
   FIRST50: 'first50',
   CONTRACTS: 'contracts',
   RELAY: 'relay',
@@ -117,7 +119,8 @@ export class Game {
 
   defaultStory() {
     return {
-      stage: STORY_STAGES.FIRST50,
+      stage: STORY_STAGES.INTRO,
+      introSeen: false,
       contractsUnlocked: false,
       relayUnlocked: false,
       relayPurchased: false,
@@ -179,6 +182,15 @@ export class Game {
     return changed;
   }
 
+  advanceIntro() {
+    if (this.state.story.stage !== STORY_STAGES.INTRO) return false;
+    this.state.story.stage = STORY_STAGES.ACTION_HINT;
+    this.state.story.introSeen = true;
+    this.emit();
+    this.save();
+    return true;
+  }
+
   addMoney(amount) {
     const value = Math.max(0, Number(amount) || 0);
     if (!value) return;
@@ -222,6 +234,10 @@ export class Game {
     sat.energy = Math.max(0, sat.energy - ACTION_ENERGY_COST);
     this.state.stats.clicks += 1;
     this.state.actionClicks += 1;
+    if (this.state.story.stage === STORY_STAGES.ACTION_HINT) {
+      this.state.story.stage = STORY_STAGES.FIRST50;
+      this.state.story.introSeen = true;
+    }
 
     let earned = 0;
     if (this.state.actionClicks >= CLICKS_PER_DOLLAR) {
@@ -363,6 +379,9 @@ export class Game {
       this.state = Object.assign(this.defaultState(), data);
       this.state.story = Object.assign(this.defaultStory(), data.story || {});
       this.state.stats = Object.assign(this.defaultStats(), data.stats || {});
+      if (!hadStory) {
+        this.state.story.stage = STORY_STAGES.FIRST50;
+      }
       if (!this.state.satellites.some(s => s.id === this.state.selectedId)) {
         this.state.selectedId = this.state.satellites[0].id;
       }
@@ -376,6 +395,18 @@ export class Game {
       }
 
       const hasRelay = this.state.satellites.some(s => s.type === 'relay');
+      if (!this.state.story.introSeen
+          && !hasRelay
+          && this.state.story.stage === STORY_STAGES.FIRST50
+          && this.state.balance < BALANCE.firstGoal
+          && this.state.stats.contracts === 0) {
+        // Один раз показываем вступление в старых сохранениях.
+        this.state.story.stage = STORY_STAGES.INTRO;
+      } else if (this.state.story.stage !== STORY_STAGES.INTRO
+          && this.state.story.stage !== STORY_STAGES.ACTION_HINT) {
+        this.state.story.introSeen = true;
+      }
+
       if (hasRelay) {
         this.state.story.contractsUnlocked = true;
         this.state.story.relayUnlocked = true;

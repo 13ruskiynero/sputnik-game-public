@@ -38,6 +38,15 @@ function formatTime(seconds) {
 }
 
 function storyTextFor(stage) {
+  if (stage === STORY_STAGES.INTRO) {
+    return 'Привет! Поздравляю, теперь ты владеешь настоящим спутником, способным делать фотографии поверхности Земли. Это уже немало. Об обслуживании пока не беспокойся, сначала разберись, как делать хорошие фотоснимки.';
+  }
+  if (stage === STORY_STAGES.ACTION_HINT) {
+    return 'Делай фотки с помощью этой кнопки «Действие» — она подсвечивается и пульсирует, пока позволяет заряд батареи твоего спутника. Батарея будет подзаряжаться, пока спутник находится на свету Солнца.';
+  }
+  if (stage === STORY_STAGES.FIRST50) {
+    return 'Делай снимки — в среднем за 5 снимков будешь получать по $1. Наделай снимков на $50, и потом посмотрим, найдутся ли заказчики для твоей работы.';
+  }
   if (stage === STORY_STAGES.CONTRACTS) {
     return 'Контракты открыты. Накопи $500 — я найду для нас старый спутник связи.';
   }
@@ -122,6 +131,8 @@ export class UI {
       storyBadge: $('story-badge'),
       btnStoryClose: $('btn-story-close'),
       storyText: $('story-text'),
+      btnStoryNext: $('btn-story-next'),
+      storyProgress: $('story-progress'),
       storyTag: $('story-tag'),
       storyGoal: $('story-goal'),
       storyProgressFill: $('story-progress-fill'),
@@ -233,6 +244,9 @@ export class UI {
     if (this.el.btnStoryClose) {
       this.el.btnStoryClose.addEventListener('click', () => this.closeStory());
     }
+    if (this.el.btnStoryNext) {
+      this.el.btnStoryNext.addEventListener('click', () => this.game.advanceIntro());
+    }
     this.el.btnTasks.addEventListener('click', () => this.el.contractCard.classList.toggle('open'));
     this.el.btnCloseContract.addEventListener('click', () => this.el.contractCard.classList.remove('open'));
     this.el.btnShop.addEventListener('click', () => this.togglePanel('panel-shop'));
@@ -319,6 +333,7 @@ export class UI {
   resetProgress() {
     this._storyOpen = false;
     this._storyUnread = true;
+    this._storyStage = null;
     this._suppressDevToggleClick = false;
     this._keepDevPanelInside = null;
     this.game.reset();
@@ -807,30 +822,60 @@ export class UI {
   renderStory(state) {
     if (!this.el.storyText) return;
     const story = state.story || {};
-    const stage = story.stage || STORY_STAGES.FIRST50;
+    const stage = story.stage || STORY_STAGES.INTRO;
     const stats = state.stats || {};
-    let goal = 'Цель: $' + BALANCE.firstGoal;
-    let progress = Math.min(100, (state.balance / BALANCE.firstGoal) * 100);
+    let goal = 'Знакомство';
+    let progress = 0;
+    let showProgress = false;
+    let showNext = false;
 
-    if (stage === STORY_STAGES.CONTRACTS) {
+    if (stage === STORY_STAGES.INTRO) {
+      goal = 'Знакомство';
+      showNext = true;
+    } else if (stage === STORY_STAGES.ACTION_HINT) {
+      goal = 'Нажми «Действие»';
+    } else if (stage === STORY_STAGES.FIRST50) {
+      goal = 'Цель: $' + BALANCE.firstGoal;
+      progress = Math.min(100, (state.balance / BALANCE.firstGoal) * 100);
+      showProgress = true;
+    } else if (stage === STORY_STAGES.CONTRACTS) {
       goal = 'Цель: $' + BALANCE.relayGoal;
       progress = Math.min(100, (state.balance / BALANCE.relayGoal) * 100);
+      showProgress = true;
     } else if (stage === STORY_STAGES.RELAY) {
       goal = 'Купить связь за $' + RELAY_COST;
       progress = story.relayUnlocked ? 100 : Math.min(100, (state.balance / RELAY_COST) * 100);
+      showProgress = true;
     } else if (stage === STORY_STAGES.AFTER_RELAY) {
       goal = 'Связь выведена';
       progress = 100;
+      showProgress = true;
     }
 
     this.el.storyText.textContent = storyTextFor(stage);
     this.el.storyTag.textContent = stage === STORY_STAGES.AFTER_RELAY ? 'Готово' : 'На связи';
     this.el.storyGoal.textContent = goal;
     this.el.storyProgressFill.style.width = progress + '%';
+    if (this.el.btnStoryNext) this.el.btnStoryNext.hidden = !showNext;
+    if (this.el.storyProgress) this.el.storyProgress.hidden = !showProgress;
     if (this.el.storyMetrics) {
       const earned = Number.isFinite(stats.totalEarned) ? stats.totalEarned : 0;
       const seconds = Number.isFinite(stats.playSeconds) ? stats.playSeconds : 0;
       this.el.storyMetrics.textContent = 'Заработано ' + formatMoney(earned) + ' · ' + formatTime(seconds);
+    }
+
+    const sat = state.satellites.find(s => s.id === state.selectedId) || state.satellites[0] || null;
+    const hintPulse = stage === STORY_STAGES.ACTION_HINT
+      && sat && sat.type === 'mapper'
+      && sat.energy >= ACTION_ENERGY_COST;
+    this.el.btnAction.classList.toggle('hint-pulse', Boolean(hintPulse));
+
+    if (stage === STORY_STAGES.INTRO && this._storyStage !== STORY_STAGES.INTRO) {
+      this.openStory();
+    } else if (stage === STORY_STAGES.ACTION_HINT && this._storyStage !== STORY_STAGES.ACTION_HINT) {
+      this.openStory();
+    } else if (this._storyStage === STORY_STAGES.ACTION_HINT && stage === STORY_STAGES.FIRST50) {
+      this.openStory();
     }
 
     if (this._storyStage && this._storyStage !== stage) {
