@@ -98,44 +98,291 @@ function latLonToVec3(lat, lon, radius) {
   );
 }
 
+function makeSatelliteTexture(size, draw) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  draw(ctx, size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+function createSatelliteMaterials() {
+  const solarTexture = makeSatelliteTexture(128, (ctx, size) => {
+    ctx.fillStyle = '#061426';
+    ctx.fillRect(0, 0, size, size);
+    const cell = 16;
+    for (let y = 0; y < size; y += cell) {
+      for (let x = 0; x < size; x += cell) {
+        const tone = (x / cell + y / cell) % 3;
+        ctx.fillStyle = tone === 0 ? '#0b2b58' : (tone === 1 ? '#0d3468' : '#092448');
+        ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
+        ctx.fillStyle = 'rgba(94, 156, 220, 0.25)';
+        ctx.fillRect(x + 2, y + 2, cell - 4, 2);
+      }
+    }
+    ctx.strokeStyle = 'rgba(188, 214, 240, 0.42)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= size; i += cell) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(size, i);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#c7a45e';
+    ctx.lineWidth = 2;
+    for (let i = 0; i <= size; i += cell * 4) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, size);
+      ctx.stroke();
+    }
+  });
+  solarTexture.repeat.set(2, 1);
+
+  const goldTexture = makeSatelliteTexture(128, (ctx, size) => {
+    ctx.fillStyle = '#9b6b2e';
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 240; i += 1) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const w = 1 + Math.random() * 5;
+      const h = 1 + Math.random() * 3;
+      const light = Math.random() > 0.45;
+      ctx.fillStyle = light
+        ? 'rgba(255, 218, 140, 0.18)'
+        : 'rgba(72, 42, 14, 0.18)';
+      ctx.fillRect(x, y, w, h);
+    }
+    for (let i = 0; i < 28; i += 1) {
+      ctx.strokeStyle = 'rgba(255, 226, 161, 0.13)';
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * size, Math.random() * size);
+      ctx.lineTo(Math.random() * size, Math.random() * size);
+      ctx.stroke();
+    }
+  });
+  goldTexture.repeat.set(2, 2);
+
+  const whiteTexture = makeSatelliteTexture(128, (ctx, size) => {
+    ctx.fillStyle = '#cbd4dc';
+    ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = 'rgba(74, 90, 108, 0.38)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= size; i += 32) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(size, i);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 90; i += 1) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.fillRect(Math.random() * size, Math.random() * size, 2, 1);
+    }
+  });
+  whiteTexture.repeat.set(2, 1);
+
+  const goldMat = new THREE.MeshStandardMaterial({
+    map: goldTexture,
+    bumpMap: goldTexture,
+    bumpScale: 0.006,
+    metalness: 0.82,
+    roughness: 0.34,
+    flatShading: true,
+  });
+  const whiteMat = new THREE.MeshStandardMaterial({
+    map: whiteTexture,
+    metalness: 0.28,
+    roughness: 0.56,
+    flatShading: true,
+  });
+  const solarMat = new THREE.MeshStandardMaterial({
+    map: solarTexture,
+    metalness: 0.56,
+    roughness: 0.36,
+    emissive: 0x061a2f,
+    emissiveIntensity: 0.55,
+  });
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: 0xd6b36b,
+    metalness: 0.86,
+    roughness: 0.28,
+  });
+  const darkMat = new THREE.MeshStandardMaterial({
+    color: 0x252b33,
+    metalness: 0.82,
+    roughness: 0.42,
+  });
+  const lensMat = new THREE.MeshStandardMaterial({
+    color: 0x071727,
+    metalness: 0.62,
+    roughness: 0.08,
+    emissive: 0x102f4d,
+    emissiveIntensity: 0.75,
+  });
+  const dishMat = new THREE.MeshStandardMaterial({
+    color: 0xd4dbe1,
+    metalness: 0.38,
+    roughness: 0.46,
+    side: THREE.DoubleSide,
+  });
+  const lightMat = new THREE.MeshBasicMaterial({ color: 0x59f2b2 });
+
+  return {
+    gold: goldMat,
+    white: whiteMat,
+    solar: solarMat,
+    frame: frameMat,
+    dark: darkMat,
+    lens: lensMat,
+    dish: dishMat,
+    light: lightMat,
+  };
+}
+
+function addSolarWing(group, side, mats) {
+  const wing = new THREE.Group();
+
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.022, 0.18), mats.solar);
+  panel.position.x = side * 0.34;
+  wing.add(panel);
+
+  const railX = new THREE.BoxGeometry(0.43, 0.014, 0.014);
+  for (const z of [-0.09, 0.09]) {
+    const rail = new THREE.Mesh(railX, mats.frame);
+    rail.position.set(side * 0.34, 0.016, z);
+    wing.add(rail);
+  }
+
+  const railZ = new THREE.BoxGeometry(0.014, 0.028, 0.19);
+  for (const dx of [-0.21, 0.21]) {
+    const rail = new THREE.Mesh(railZ, mats.frame);
+    rail.position.set(side * (0.34 + dx), 0, 0);
+    wing.add(rail);
+  }
+
+  const boom = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.012, 0.014), mats.gold);
+  boom.position.set(side * 0.19, 0, 0);
+  wing.add(boom);
+
+  const hinge = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.04, 8), mats.frame);
+  hinge.rotation.z = Math.PI / 2;
+  hinge.position.x = side * 0.12;
+  wing.add(hinge);
+
+  group.add(wing);
+}
+
 function buildSatelliteMesh(type) {
   const group = new THREE.Group();
+  const mats = createSatelliteMaterials();
+  const isRelay = type === 'relay';
+  const bodyRadius = isRelay ? 0.13 : 0.12;
 
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: type === 'relay' ? 0xffd479 : 0xd8e6f2,
-    metalness: 0.55,
-    roughness: 0.35,
-  });
-  const panelMat = new THREE.MeshStandardMaterial({
-    color: 0x2b6cb0,
-    metalness: 0.7,
-    roughness: 0.3,
-    emissive: 0x081c33,
-    emissiveIntensity: 0.8,
-  });
-
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.24), bodyMat);
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(bodyRadius, bodyRadius, 0.24, 8),
+    isRelay ? mats.white : mats.gold
+  );
+  body.rotation.x = Math.PI / 2;
   group.add(body);
 
-  const panelGeo = new THREE.BoxGeometry(0.42, 0.02, 0.16);
-  const left = new THREE.Mesh(panelGeo, panelMat);
-  left.position.x = -0.31;
-  group.add(left);
-  const right = new THREE.Mesh(panelGeo, panelMat);
-  right.position.x = 0.31;
-  group.add(right);
+  const band = new THREE.Mesh(
+    new THREE.CylinderGeometry(bodyRadius + 0.006, bodyRadius + 0.006, 0.045, 8),
+    isRelay ? mats.gold : mats.white
+  );
+  band.rotation.x = Math.PI / 2;
+  band.position.z = 0.02;
+  group.add(band);
 
-  if (type === 'relay') {
+  const antennaMast = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.006, 0.006, 0.13, 6),
+    mats.frame
+  );
+  antennaMast.position.y = 0.17;
+  group.add(antennaMast);
+
+  const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), mats.frame);
+  antennaTip.position.y = 0.24;
+  group.add(antennaTip);
+
+  for (const x of [-0.055, 0.055]) {
+    const thruster = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.055, 8), mats.dark);
+    thruster.rotation.x = -Math.PI / 2;
+    thruster.position.set(x, 0, -0.145);
+    group.add(thruster);
+  }
+
+  const statusLight = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), mats.light);
+  statusLight.position.set(0.075, 0.07, 0.115);
+  group.add(statusLight);
+
+  if (isRelay) {
     const dish = new THREE.Mesh(
-      new THREE.SphereGeometry(0.10, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-      bodyMat
+      new THREE.SphereGeometry(0.18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+      mats.dish
     );
     dish.rotation.x = Math.PI;
-    dish.position.y = -0.13;
+    dish.position.y = -0.16;
     group.add(dish);
+
+    for (let i = 0; i < 3; i += 1) {
+      const angle = (Math.PI * 2 * i) / 3;
+      const strut = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.006, 0.006, 0.15, 6),
+        mats.frame
+      );
+      strut.position.set(Math.cos(angle) * 0.13, -0.19, Math.sin(angle) * 0.13);
+      group.add(strut);
+    }
+
+    const feed = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.022, 0.13, 8),
+      mats.gold
+    );
+    feed.position.y = -0.23;
+    group.add(feed);
+  } else {
+    const lensRing = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.008, 8, 24), mats.frame);
+    lensRing.position.z = 0.13;
+    group.add(lensRing);
+
+    const lens = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.048, 0.054, 0.012, 24),
+      mats.lens
+    );
+    lens.rotation.x = Math.PI / 2;
+    lens.position.z = 0.138;
+    group.add(lens);
+
+    const sensor = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.035, 0.07), mats.white);
+    sensor.position.set(0, 0.085, 0.08);
+    group.add(sensor);
+  }
+
+  for (const x of [-1, 1]) addSolarWing(group, x, mats);
+
+  const greebleGeo = new THREE.BoxGeometry(0.028, 0.024, 0.032);
+  for (const x of [-0.08, 0.08]) {
+    const greeble = new THREE.Mesh(greebleGeo, mats.dark);
+    greeble.position.set(x, -0.075, 0.06);
+    group.add(greeble);
   }
 
   group.scale.setScalar(1.3);
+  group.userData.modelType = type;
   return group;
 }
 
