@@ -84,7 +84,7 @@
     <span class="dev-label">DEV</span>
     <button id="dev-speed-2" class="dev-btn" type="button" title="Ускорение времени ×2">×2</button>
     <button id="dev-speed-5" class="dev-btn" type="button" title="Ускорение времени ×5">×5</button>
-    <button id="dev-eclipse" class="dev-btn" type="button" title="Затмение: лунное/солнечное (отладка)">🌑</button>
+    <button id="dev-pause" class="dev-btn" type="button" title="Пауза">⏸</button>
   </div>
 
   <section id="panel-satellites" class="panel" aria-label="Спутники">
@@ -146,6 +146,7 @@
           <h3 id="sat-detail-name">Картограф-1</h3>
           <p id="sat-detail-subtitle" class="sat-detail-subtitle">Картограф · Полярная</p>
         </div>
+        <button id="btn-sat-orbit" class="orbit-open-btn" type="button" title="Настроить орбиту">🛰 Орбита</button>
       </div>
 
       <div class="sat-detail-energy">
@@ -195,6 +196,41 @@
       </dl>
 
       <p id="instrument-note" class="panel-note">Снимает поверхность в видимом диапазоне. Качество зависит от освещения и облачности.</p>
+    </div>
+
+    <div id="orbit-editor" class="orbit-editor" hidden>
+      <button id="btn-orbit-back" class="back-btn" type="button">← К спутнику</button>
+      <div class="sat-detail-head">
+        <div>
+          <h3 id="orbit-title">Орбита</h3>
+          <p id="orbit-subtitle" class="sat-detail-subtitle">Картограф-1 · Полярная</p>
+        </div>
+      </div>
+
+      <div class="orbit-control">
+        <div class="orbit-row">
+          <label for="orbit-altitude">Высота</label>
+          <strong id="orbit-altitude-value">550 км</strong>
+        </div>
+        <input id="orbit-altitude" type="range" min="300" max="40000" step="1" value="550">
+        <div class="orbit-recommend">Рекомендуемая: <span id="orbit-altitude-recommended">550 км</span></div>
+      </div>
+
+      <div class="orbit-control">
+        <div class="orbit-row">
+          <label for="orbit-inclination">Наклонение</label>
+          <strong id="orbit-inclination-value">90°</strong>
+        </div>
+        <input id="orbit-inclination" type="range" min="0" max="180" step="1" value="90">
+        <div class="orbit-recommend">Рекомендуемое: <span id="orbit-inclination-recommended">90°</span></div>
+      </div>
+
+      <div class="orbit-actions">
+        <button id="btn-orbit-recommended" class="buy-btn" type="button">Рекомендуемая</button>
+        <button id="btn-orbit-apply" class="buy-btn" type="button">Применить</button>
+        <button id="btn-orbit-cancel" class="back-btn" type="button">Отмена</button>
+      </div>
+      <p class="panel-note">Камера отдаляется под выбранную орбиту. При приближении к рекомендованной высоте или наклонению ползунок прилипает к ней.</p>
     </div>
   </div>
 

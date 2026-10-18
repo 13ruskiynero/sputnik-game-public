@@ -5,7 +5,7 @@ import { UI } from './ui.js';
 const canvas = document.getElementById('scene');
 const game = new Game();
 const world = createWorld(canvas, where => game.select(where));
-const time = { scale: 1 };
+const time = { scale: 1, paused: false };
 const ui = new UI(game, world, time);
 
 world.syncSatellites(game.state.satellites);
@@ -25,7 +25,8 @@ game.subscribe(state => {
 
 let last = performance.now();
 function frame(now) {
-  const dt = Math.min((now - last) / 1000, 0.05) * time.scale;
+  const scale = time.paused ? 0 : time.scale;
+  const dt = Math.min((now - last) / 1000, 0.05) * scale;
   last = now;
   const sunlit = world.getSunlitMap();
   game.update(dt, sunlit);

@@ -16,6 +16,25 @@ function zoneHint(angle) {
   return 'следите за орбитой';
 }
 
+function orbitOf(sat) {
+  const recommended = SATELLITE_SPECS[sat.type]?.recommendedOrbit || {
+    altitudeKm: 550,
+    inclinationDeg: 90,
+  };
+  const orbit = sat.orbit || recommended;
+  return {
+    altitudeKm: Number.isFinite(orbit.altitudeKm) ? orbit.altitudeKm : recommended.altitudeKm,
+    inclinationDeg: Number.isFinite(orbit.inclinationDeg) ? orbit.inclinationDeg : recommended.inclinationDeg,
+  };
+}
+
+function orbitLabelFor(orbit) {
+  const inclination = Math.abs(orbit.inclinationDeg);
+  if (inclination >= 80) return 'Полярная';
+  if (inclination <= 5) return orbit.altitudeKm >= 30000 ? 'Геостационарная' : 'Экваториальная';
+  return 'Наклонная';
+}
+
 export class UI {
   constructor(game, world, time = { scale: 1 }) {
     this.game = game;
@@ -24,6 +43,7 @@ export class UI {
     this._satKey = '';
     this._zoneKey = '';
     this._detailId = null;
+    this._orbitEdit = null;
 
     const $ = id => document.getElementById(id);
     this.el = {
@@ -46,6 +66,20 @@ export class UI {
       btnSatSheetClose: $('btn-sat-sheet-close'),
       btnSatInstrument: $('btn-sat-instrument'),
       btnInstrumentBack: $('btn-instrument-back'),
+      btnSatOrbit: $('btn-sat-orbit'),
+      orbitEditor: $('orbit-editor'),
+      orbitTitle: $('orbit-title'),
+      orbitSubtitle: $('orbit-subtitle'),
+      orbitAltitude: $('orbit-altitude'),
+      orbitInclination: $('orbit-inclination'),
+      orbitAltitudeValue: $('orbit-altitude-value'),
+      orbitInclinationValue: $('orbit-inclination-value'),
+      orbitAltitudeRecommended: $('orbit-altitude-recommended'),
+      orbitInclinationRecommended: $('orbit-inclination-recommended'),
+      btnOrbitBack: $('btn-orbit-back'),
+      btnOrbitRecommended: $('btn-orbit-recommended'),
+      btnOrbitApply: $('btn-orbit-apply'),
+      btnOrbitCancel: $('btn-orbit-cancel'),
       satDetailName: $('sat-detail-name'),
       satDetailSubtitle: $('sat-detail-subtitle'),
       satDetailEnergy: $('sat-detail-energy'),
@@ -76,7 +110,7 @@ export class UI {
       btnReset: $('btn-reset'),
       devSpeed2: $('dev-speed-2'),
       devSpeed5: $('dev-speed-5'),
-      devEclipse: $('dev-eclipse'),
+      devPause: $('dev-pause'),
       devPanel: $('dev-panel'),
       satList: $('sat-list'),
       toasts: $('toasts'),
@@ -92,6 +126,13 @@ export class UI {
     if (this.el.btnSatSheetClose) this.el.btnSatSheetClose.addEventListener('click', () => this.hideSatSheet());
     if (this.el.btnSatInstrument) this.el.btnSatInstrument.addEventListener('click', () => this.showInstrument());
     if (this.el.btnInstrumentBack) this.el.btnInstrumentBack.addEventListener('click', () => this.showSatelliteView());
+    if (this.el.btnSatOrbit) this.el.btnSatOrbit.addEventListener('click', () => this.openOrbitEditor());
+    if (this.el.btnOrbitBack) this.el.btnOrbitBack.addEventListener('click', () => this.cancelOrbitEdit());
+    if (this.el.btnOrbitCancel) this.el.btnOrbitCancel.addEventListener('click', () => this.cancelOrbitEdit());
+    if (this.el.btnOrbitRecommended) this.el.btnOrbitRecommended.addEventListener('click', () => this.resetOrbitToRecommended());
+    if (this.el.btnOrbitApply) this.el.btnOrbitApply.addEventListener('click', () => this.applyOrbitEdit());
+    if (this.el.orbitAltitude) this.el.orbitAltitude.addEventListener('input', () => this.onOrbitInput());
+    if (this.el.orbitInclination) this.el.orbitInclination.addEventListener('input', () => this.onOrbitInput());
     this.el.btnTasks.addEventListener('click', () => this.el.contractCard.classList.toggle('open'));
     this.el.btnCloseContract.addEventListener('click', () => this.el.contractCard.classList.remove('open'));
     this.el.btnShop.addEventListener('click', () => this.togglePanel('panel-shop'));
@@ -101,14 +142,18 @@ export class UI {
     this.el.btnReset.addEventListener('click', () => {
       this.game.reset();
       this.time.scale = 1;
+      this.time.paused = false;
       this.updateDevButtons();
       this.closePanels();
       this.toast('Прогресс сброшен', 'warn');
     });
     this.bindDevSpeed(this.el.devSpeed2, 2);
     this.bindDevSpeed(this.el.devSpeed5, 5);
-    if (this.el.devEclipse) {
-      this.el.devEclipse.addEventListener('click', () => this.world.triggerEclipse());
+    if (this.el.devPause) {
+      this.el.devPause.addEventListener('click', () => {
+        this.time.paused = !this.time.paused;
+        this.updateDevButtons();
+      });
     }
     this.bindDevPanelDrag();
     this.updateDevButtons();
@@ -206,13 +251,22 @@ export class UI {
       this.el.devSpeed5.classList.toggle('active', active === 5);
       this.el.devSpeed5.setAttribute('aria-pressed', String(active === 5));
     }
+    if (this.el.devPause) {
+      const paused = Boolean(this.time.paused);
+      this.el.devPause.classList.toggle('active', paused);
+      this.el.devPause.setAttribute('aria-pressed', String(paused));
+      this.el.devPause.textContent = paused ? '▶' : '⏸';
+      this.el.devPause.title = paused ? 'Продолжить' : 'Пауза';
+    }
   }
 
   hideSatSheet() {
+    if (this._orbitEdit) this.cancelOrbitEdit();
     this._detailId = null;
     if (this.el.satSheet) this.el.satSheet.hidden = true;
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+    if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
   }
 
   backToSatList() {
@@ -227,12 +281,14 @@ export class UI {
     this._detailId = id;
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+    if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
     this.el.satSheet.hidden = false;
     this.renderSatDetail(id);
   }
 
   showSatelliteView() {
     if (!this._detailId || !this.el.satSheet) return;
+    if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     this.renderSatDetail(this._detailId);
@@ -242,6 +298,7 @@ export class UI {
     const sat = this.game.state.satellites.find(s => s.id === this._detailId);
     if (!sat || !this.el.satSheet) return;
     this.renderInstrument(sat);
+    if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
     if (this.el.satDetail) this.el.satDetail.hidden = true;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = false;
   }
@@ -255,24 +312,24 @@ export class UI {
     }
     const spec = SATELLITE_SPECS[sat.type] || {};
     const info = this.world.getSatelliteInfo(id) || {};
+    const orbit = orbitOf(sat);
+    const orbitLabel = orbitLabelFor(orbit);
     const energy = Math.round(Math.max(0, Math.min(100, sat.energy)));
-    const inclination = Number.isFinite(info.inclinationDeg)
-      ? Math.abs(info.inclinationDeg).toFixed(0) + '°'
-      : null;
-    const altitudeKm = Number.isFinite(spec.altitudeKm) ? spec.altitudeKm : null;
-    const distanceKm = altitudeKm != null ? EARTH_RADIUS_KM + altitudeKm : null;
+    const inclination = Math.abs(orbit.inclinationDeg).toFixed(0) + '°';
+    const altitudeKm = orbit.altitudeKm;
+    const distanceKm = EARTH_RADIUS_KM + altitudeKm;
     const instrument = spec.instrument || {};
 
     this.el.satDetailName.textContent = sat.name;
     this.el.satDetailSubtitle.textContent =
-      [spec.kind, spec.orbitLabel].filter(Boolean).join(' · ');
+      [spec.kind, orbitLabel].filter(Boolean).join(' · ');
     this.el.satDetailEnergy.textContent = energy + '%';
     this.el.satDetailEnergyFill.style.width = energy + '%';
     this.el.satDetailEnergyFill.classList.toggle('low', energy < 20);
     this.el.satDetailWork.textContent = spec.role || '—';
     this.el.satDetailInstrument.textContent = instrument.name || '—';
     this.el.satDetailOrbit.textContent =
-      [spec.orbitLabel, inclination].filter(Boolean).join(' · ') || '—';
+      [orbitLabel, inclination].filter(Boolean).join(' · ');
     this.el.satDetailDistance.textContent = distanceKm != null
       ? distanceKm.toLocaleString('ru-RU') + ' км от центра'
       : '—';
@@ -301,6 +358,108 @@ export class UI {
     this.el.instrumentChannels.textContent = instrument.channels || '—';
     this.el.instrumentPower.textContent = instrument.power || '—';
     this.el.instrumentNote.textContent = instrument.note || '';
+  }
+
+  recommendedOrbit(sat) {
+    return SATELLITE_SPECS[sat.type]?.recommendedOrbit || orbitOf(sat);
+  }
+
+  openOrbitEditor() {
+    const sat = this.game.state.satellites.find(s => s.id === this._detailId);
+    if (!sat || !this.el.orbitEditor) return;
+    const original = orbitOf(sat);
+    const recommended = this.recommendedOrbit(sat);
+    this._orbitEdit = {
+      id: sat.id,
+      original: { ...original },
+      draft: { ...original },
+      recommended: { ...recommended },
+      prevZoom: this.world.getZoom(),
+    };
+    this.el.orbitTitle.textContent = 'Орбита · ' + sat.name;
+    this.el.orbitAltitudeRecommended.textContent =
+      recommended.altitudeKm.toLocaleString('ru-RU') + ' км';
+    this.el.orbitInclinationRecommended.textContent =
+      recommended.inclinationDeg + '°';
+    this.setOrbitControls(original);
+    if (this.el.satDetail) this.el.satDetail.hidden = true;
+    if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+    this.el.orbitEditor.hidden = false;
+    this.el.satSheet.hidden = false;
+    this.world.zoomToOrbit(this.world.getVisualRadius(recommended.altitudeKm));
+  }
+
+  setOrbitControls(orbit) {
+    if (!this.el.orbitAltitude || !this.el.orbitInclination) return;
+    this.el.orbitAltitude.value = String(orbit.altitudeKm);
+    this.el.orbitInclination.value = String(orbit.inclinationDeg);
+    this.updateOrbitLabels();
+  }
+
+  updateOrbitLabels() {
+    if (!this.el.orbitAltitude || !this.el.orbitInclination) return;
+    const altitudeKm = Number(this.el.orbitAltitude.value);
+    const inclinationDeg = Number(this.el.orbitInclination.value);
+    this.el.orbitAltitudeValue.textContent = altitudeKm.toLocaleString('ru-RU') + ' км';
+    this.el.orbitInclinationValue.textContent = inclinationDeg + '°';
+    const sat = this.game.state.satellites.find(s => s.id === this._orbitEdit?.id);
+    this.el.orbitSubtitle.textContent =
+      [sat?.name, orbitLabelFor({ altitudeKm, inclinationDeg })].filter(Boolean).join(' · ');
+  }
+
+  onOrbitInput() {
+    const edit = this._orbitEdit;
+    if (!edit || !this.el.orbitAltitude) return;
+    let altitudeKm = Number(this.el.orbitAltitude.value);
+    let inclinationDeg = Number(this.el.orbitInclination.value);
+
+    const snapAltitude = Math.max(50, edit.recommended.altitudeKm * 0.02);
+    if (Math.abs(altitudeKm - edit.recommended.altitudeKm) <= snapAltitude) {
+      altitudeKm = edit.recommended.altitudeKm;
+      this.el.orbitAltitude.value = String(altitudeKm);
+    }
+    if (Math.abs(inclinationDeg - edit.recommended.inclinationDeg) <= 3) {
+      inclinationDeg = edit.recommended.inclinationDeg;
+      this.el.orbitInclination.value = String(inclinationDeg);
+    }
+
+    edit.draft = { altitudeKm, inclinationDeg };
+    this.updateOrbitLabels();
+    this.world.updateSatelliteOrbit(edit.id, edit.draft);
+    this.world.zoomToOrbit(this.world.getVisualRadius(altitudeKm));
+  }
+
+  resetOrbitToRecommended() {
+    const edit = this._orbitEdit;
+    if (!edit) return;
+    edit.draft = { ...edit.recommended };
+    this.setOrbitControls(edit.draft);
+    this.world.updateSatelliteOrbit(edit.id, edit.draft);
+    this.world.zoomToOrbit(this.world.getVisualRadius(edit.draft.altitudeKm));
+  }
+
+  applyOrbitEdit() {
+    const edit = this._orbitEdit;
+    if (!edit) return;
+    this.game.setSatelliteOrbit(edit.id, edit.draft);
+    this.world.updateSatelliteOrbit(edit.id, edit.draft);
+    this._orbitEdit = null;
+    if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
+    if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+    if (this.el.satDetail) this.el.satDetail.hidden = false;
+    this.renderSatDetail(edit.id);
+  }
+
+  cancelOrbitEdit() {
+    const edit = this._orbitEdit;
+    if (!edit) return;
+    this._orbitEdit = null;
+    this.world.updateSatelliteOrbit(edit.id, edit.original);
+    this.world.zoomToOrbit(this.world.getVisualRadius(edit.original.altitudeKm));
+    if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
+    if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
+    if (this.el.satDetail) this.el.satDetail.hidden = false;
+    this.renderSatDetail(edit.id);
   }
 
   togglePanel(id) {
@@ -344,6 +503,8 @@ export class UI {
     }
     this.toast('Куплен ' + result.sat.name + ': +$0.05/сек', 'ok');
     this.closePanels();
+    this.showSatDetail(result.sat.id);
+    this.openOrbitEditor();
   }
 
   pulseAction() {

@@ -1,11 +1,19 @@
 import * as THREE from 'three';
+import { RECOMMENDED_ORBITS } from './game.js';
 
 const EARTH_RADIUS = 1.5;
 const CONTRACT_RADIUS = EARTH_RADIUS * 1.004;
 const MIN_ZOOM = 0.82;
-const MAX_ZOOM = 1.4;
+const MAX_ZOOM = 3.2;
 const MIN_POLAR = 0.35;
 const MAX_POLAR = 2.6;
+const ORBIT_MIN_KM = 300;
+const ORBIT_MAX_KM = 40000;
+const LEO_REF_KM = 550;
+const LEO_REF_RADIUS = 2.15;
+const GEO_REF_KM = 35786;
+const GEO_REF_RADIUS = 6.5;
+const ORBIT_REF_SPEED = 0.22;
 const AUTO_SPIN = 0.035; // радиан в секунду, собственное вращение планеты
 const MOON_RADIUS = 0.38;
 const MOON_ORBIT_SPEED = 0.02;
@@ -14,6 +22,49 @@ const ECLIPSE_IN = 5;
 const ECLIPSE_HOLD = 15;
 const ECLIPSE_OUT = 6;
 const GAME_YEAR = (Math.PI * 2) / SUN_ORBIT_SPEED;
+
+// Визуальный масштаб орбит сжат: высота в километрах отображается
+// логарифмически, иначе геостационарная орбита улетела бы за камеру.
+function visualRadiusForAltitude(altitudeKm) {
+  const altitude = Math.max(ORBIT_MIN_KM, Math.min(ORBIT_MAX_KM, Number(altitudeKm) || LEO_REF_KM));
+  const low = Math.log1p(LEO_REF_KM / ORBIT_MIN_KM);
+  const high = Math.log1p(GEO_REF_KM / ORBIT_MIN_KM);
+  const t = (Math.log1p(altitude / ORBIT_MIN_KM) - low) / (high - low);
+  return LEO_REF_RADIUS + (GEO_REF_RADIUS - LEO_REF_RADIUS) * Math.max(0, Math.min(1, t));
+}
+
+function speedForRadius(radius) {
+  return ORBIT_REF_SPEED * Math.pow(LEO_REF_RADIUS / radius, 1.5);
+}
+
+function orbitForSatellite(sat) {
+  const recommended = RECOMMENDED_ORBITS[sat.type] || RECOMMENDED_ORBITS.mapper;
+  const orbit = sat.orbit || recommended;
+  return {
+    altitudeKm: Number.isFinite(orbit.altitudeKm) ? orbit.altitudeKm : recommended.altitudeKm,
+    inclinationDeg: Number.isFinite(orbit.inclinationDeg) ? orbit.inclinationDeg : recommended.inclinationDeg,
+  };
+}
+
+function buildOrbitLine(radius, isRelay) {
+  const points = [];
+  for (let i = 0; i <= 128; i += 1) {
+    const a = (i / 128) * Math.PI * 2;
+    points.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+  }
+  const orbitGeom = new THREE.BufferGeometry().setFromPoints(points);
+  const orbitMaterial = new THREE.LineDashedMaterial({
+    color: isRelay ? 0xffd479 : 0x8fd3ff,
+    transparent: true,
+    opacity: isRelay ? 0.20 : 0.26,
+    dashSize: 0.08,
+    gapSize: 0.14,
+    depthWrite: false,
+  });
+  const line = new THREE.Line(orbitGeom, orbitMaterial);
+  line.computeLineDistances();
+  return line;
+}
 
 // Спутник в тени Земли, если он позади планеты и его расстояние
 // от оси Земля–Солнце меньше радиуса Земли. Иначе он видит Солнце
@@ -308,35 +359,22 @@ export function createWorld(canvas, onSelect) {
 
   function createSatellite(sat, index) {
     const isRelay = sat.type === 'relay';
-    const radius = isRelay ? 2.75 : 2.15;
-    const speed = isRelay ? 0.12 : 0.22;
-    const inclination = isRelay ? -0.30 : Math.PI / 2;
-    const node = isRelay ? 1.2 : 0.28;
+    const orbit = orbitForSatellite(sat);
+    const radius = visualRadiusForAltitude(orbit.altitudeKm);
+    const speed = speedForRadius(radius);
+    const inclination = THREE.MathUtils.degToRad(orbit.inclinationDeg);
+    const node = isRelay ? 0 : 0.28;
 
     const orbitGroup = new THREE.Group();
     orbitGroup.rotation.x = inclination;
     orbitGroup.rotation.y = node;
     earthGroup.add(orbitGroup);
 
-    const points = [];
-    for (let i = 0; i <= 128; i += 1) {
-      const a = (i / 128) * Math.PI * 2;
-      points.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
-    }
-    const orbitGeom = new THREE.BufferGeometry().setFromPoints(points);
-    const orbitMaterial = new THREE.LineDashedMaterial({
-      color: isRelay ? 0xffd479 : 0x8fd3ff,
-      transparent: true,
-      opacity: isRelay ? 0.20 : 0.26,
-      dashSize: 0.08,
-      gapSize: 0.14,
-      depthWrite: false,
-    });
-    const orbitLine = new THREE.Line(orbitGeom, orbitMaterial);
-    orbitLine.computeLineDistances();
+    const orbitLine = buildOrbitLine(radius, isRelay);
     orbitGroup.add(orbitLine);
 
     const mesh = buildSatelliteMesh(sat.type);
+    mesh.scale.setScalar(1.3 * Math.max(1, radius / LEO_REF_RADIUS));
     const phase = index * 2.1 + (isRelay ? 1.1 : 0);
     mesh.position.set(Math.cos(phase) * radius, 0, Math.sin(phase) * radius);
     mesh.userData.satId = sat.id;
@@ -357,6 +395,35 @@ export function createWorld(canvas, onSelect) {
 
     orbitGroup.add(mesh);
     satellites.set(sat.id, { mesh, orbitGroup, orbitLine, radius, speed, phase, ring, type: sat.type });
+  }
+
+  function updateSatelliteOrbit(id, orbit) {
+    const entry = satellites.get(id);
+    if (!entry || !orbit) return false;
+    const altitude = Math.max(ORBIT_MIN_KM, Math.min(ORBIT_MAX_KM, Number(orbit.altitudeKm) || LEO_REF_KM));
+    const inclination = Math.max(0, Math.min(180, Number(orbit.inclinationDeg) || 0));
+    const radius = visualRadiusForAltitude(altitude);
+    const speed = speedForRadius(radius);
+
+    entry.radius = radius;
+    entry.speed = speed;
+    entry.orbitGroup.rotation.x = THREE.MathUtils.degToRad(inclination);
+    entry.orbitGroup.rotation.y = entry.type === 'relay' ? 0 : 0.28;
+
+    const nextLine = buildOrbitLine(radius, entry.type === 'relay');
+    entry.orbitGroup.remove(entry.orbitLine);
+    if (entry.orbitLine.geometry) entry.orbitLine.geometry.dispose();
+    if (entry.orbitLine.material) entry.orbitLine.material.dispose();
+    entry.orbitGroup.add(nextLine);
+    entry.orbitLine = nextLine;
+
+    entry.mesh.position.set(
+      Math.cos(entry.phase) * radius,
+      0,
+      Math.sin(entry.phase) * radius
+    );
+    entry.mesh.scale.setScalar(1.3 * Math.max(1, radius / LEO_REF_RADIUS));
+    return true;
   }
 
   function syncSatellites(list) {
@@ -631,6 +698,33 @@ export function createWorld(canvas, onSelect) {
     camera.updateProjectionMatrix();
   }
 
+  function zoomForRadius(radius) {
+    const width = canvas.clientWidth || window.innerWidth;
+    const height = canvas.clientHeight || window.innerHeight;
+    const aspect = width / height;
+    const vertical = THREE.MathUtils.degToRad(camera.fov / 2);
+    const horizontal = Math.atan(Math.tan(vertical) * aspect);
+    const half = Math.min(vertical, horizontal);
+    const distance = Math.max(baseDistance(aspect), radius / Math.tan(half) * 1.18);
+    return THREE.MathUtils.clamp(distance / baseDistance(aspect), MIN_ZOOM, MAX_ZOOM);
+  }
+
+  function zoomToOrbit(radius) {
+    zoomFactor = zoomForRadius(radius);
+    applyCamera();
+    return zoomFactor;
+  }
+
+  function setZoom(value) {
+    zoomFactor = THREE.MathUtils.clamp(Number(value) || 1, MIN_ZOOM, MAX_ZOOM);
+    applyCamera();
+    return zoomFactor;
+  }
+
+  function getZoom() {
+    return zoomFactor;
+  }
+
   function resize() {
     const width = canvas.clientWidth || window.innerWidth;
     const height = canvas.clientHeight || window.innerHeight;
@@ -769,6 +863,13 @@ export function createWorld(canvas, onSelect) {
     render,
     update,
     syncSatellites,
+    updateSatelliteOrbit,
+    zoomToOrbit,
+    setZoom,
+    getZoom,
+    getVisualRadius(altitudeKm) {
+      return visualRadiusForAltitude(altitudeKm);
+    },
     setContract,
     getAngleToContract,
     getSunlitMap,
@@ -862,6 +963,7 @@ export function createWorld(canvas, onSelect) {
       const entry = satellites.get(id);
       if (!entry) return null;
       return {
+        radius: entry.radius,
         distance: entry.radius,
         altitude: entry.radius - EARTH_RADIUS,
         periodSec: (Math.PI * 2) / Math.abs(entry.speed),

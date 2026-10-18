@@ -470,6 +470,73 @@ html, body {
   font-size: 14px;
 }
 
+.orbit-open-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid rgba(89, 242, 178, 0.35);
+  border-radius: 10px;
+  background: rgba(89, 242, 178, 0.08);
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.orbit-control {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(140, 190, 255, 0.04);
+}
+
+.orbit-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.orbit-row strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.orbit-control input[type="range"] {
+  display: block;
+  width: 100%;
+  margin: 8px 0 3px;
+  accent-color: var(--accent);
+}
+
+.orbit-recommend {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.orbit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.orbit-actions .buy-btn,
+.orbit-actions .back-btn {
+  margin: 0;
+}
+
+#orbit-editor[hidden] {
+  display: none;
+}
+
 .back-btn {
   display: inline-flex;
   align-items: center;

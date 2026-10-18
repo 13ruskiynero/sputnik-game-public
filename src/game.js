@@ -12,12 +12,17 @@ export const RELAY_INCOME = 0.05;
 
 export const EARTH_RADIUS_KM = 6371;
 
+export const RECOMMENDED_ORBITS = {
+  mapper: { altitudeKm: 550, inclinationDeg: 90 },
+  relay: { altitudeKm: 35786, inclinationDeg: 0 },
+};
+
 export const SATELLITE_SPECS = {
   mapper: {
     kind: 'Картограф',
     role: 'Картографирование поверхности',
     orbitLabel: 'Полярная',
-    altitudeKm: 550,
+    recommendedOrbit: RECOMMENDED_ORBITS.mapper,
     instrument: {
       name: 'Оптическая камера',
       kind: 'Оптическая съёмка',
@@ -32,8 +37,8 @@ export const SATELLITE_SPECS = {
   relay: {
     kind: 'Связь',
     role: 'Связь и ретрансляция',
-    orbitLabel: 'Наклонная низкая',
-    altitudeKm: 800,
+    orbitLabel: 'Геостационарная',
+    recommendedOrbit: RECOMMENDED_ORBITS.relay,
     instrument: {
       name: 'Антенна и ретранслятор',
       kind: 'Связь',
@@ -71,7 +76,7 @@ export class Game {
       actionClicks: 0,
       incomePerSec: 0,
       satellites: [
-        { id: 'mapper-1', type: 'mapper', name: 'Картограф-1', energy: 100, selected: true },
+        { id: 'mapper-1', type: 'mapper', name: 'Картограф-1', energy: 100, selected: true, orbit: { ...RECOMMENDED_ORBITS.mapper } },
       ],
       selectedId: 'mapper-1',
       contract: this.newContractData(),
@@ -204,6 +209,7 @@ export class Game {
       name: 'Связь-' + count,
       energy: ENERGY_MAX,
       selected: false,
+      orbit: { ...RECOMMENDED_ORBITS.relay },
     };
     this.state.satellites.push(sat);
     this.state.incomePerSec = Math.round((this.state.incomePerSec + RELAY_INCOME) * 100) / 100;
@@ -212,6 +218,18 @@ export class Game {
     this.emit();
     this.save();
     return { ok: true, sat };
+  }
+
+  setSatelliteOrbit(id, orbit) {
+    const sat = this.state.satellites.find(s => s.id === id);
+    if (!sat || !orbit) return null;
+    sat.orbit = {
+      altitudeKm: Math.round(clamp(Number(orbit.altitudeKm) || 0, 300, 40000)),
+      inclinationDeg: Math.round(clamp(Number(orbit.inclinationDeg) || 0, 0, 180)),
+    };
+    this.emit();
+    this.save();
+    return sat.orbit;
   }
 
   reset() {
@@ -243,7 +261,12 @@ export class Game {
       if (!this.state.satellites.some(s => s.id === this.state.selectedId)) {
         this.state.selectedId = this.state.satellites[0].id;
       }
-      for (const s of this.state.satellites) s.selected = s.id === this.state.selectedId;
+      for (const s of this.state.satellites) {
+        s.selected = s.id === this.state.selectedId;
+        if (!s.orbit) {
+          s.orbit = { ...(RECOMMENDED_ORBITS[s.type] || RECOMMENDED_ORBITS.mapper) };
+        }
+      }
     } catch (e) {
       // битое сохранение — начинаем заново
     }
