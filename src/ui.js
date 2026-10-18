@@ -126,6 +126,7 @@ export class UI {
       contractZone: $('contract-zone'),
       contractCard: $('contract-card'),
       btnSatellites: $('btn-satellites'),
+      storyWidget: $('story-widget'),
       storyCard: $('story-card'),
       storyCollapsed: $('story-collapsed'),
       storyBadge: $('story-badge'),
@@ -247,8 +248,8 @@ export class UI {
     if (this.el.btnStoryNext) {
       this.el.btnStoryNext.addEventListener('click', () => this.game.advanceIntro());
     }
-    this.el.btnTasks.addEventListener('click', () => this.el.contractCard.classList.toggle('open'));
-    this.el.btnCloseContract.addEventListener('click', () => this.el.contractCard.classList.remove('open'));
+    this.el.btnTasks.addEventListener('click', () => this.toggleContractCard());
+    this.el.btnCloseContract.addEventListener('click', () => this.closeContractCard());
     this.el.btnShop.addEventListener('click', () => this.togglePanel('panel-shop'));
     this.el.btnMenu.addEventListener('click', () => this.togglePanel('panel-menu'));
     this.el.btnAction.addEventListener('click', () => this.onAction());
@@ -282,6 +283,7 @@ export class UI {
     }
     this.bindDevPanelDrag();
     this.updateDevButtons();
+    window.addEventListener('resize', () => this.updateStoryWidgetPosition());
 
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -771,6 +773,26 @@ export class UI {
     for (const panel of this.el.panels) panel.classList.remove('open');
   }
 
+  toggleContractCard() {
+    this.el.contractCard.classList.toggle('open');
+    this.updateStoryWidgetPosition();
+  }
+
+  closeContractCard() {
+    this.el.contractCard.classList.remove('open');
+    this.updateStoryWidgetPosition();
+  }
+
+  updateStoryWidgetPosition() {
+    if (!this.el.storyWidget || !this.el.contractCard) return;
+    if (this.el.contractCard.classList.contains('open')) {
+      const rect = this.el.contractCard.getBoundingClientRect();
+      this.el.storyWidget.style.top = Math.max(0, Math.round(rect.bottom + 8)) + 'px';
+    } else {
+      this.el.storyWidget.style.top = '';
+    }
+  }
+
   onAction() {
     const sat = this.game.selectedSatellite();
     const angle = sat ? this.world.getAngleToContract(sat.id) : null;
@@ -899,6 +921,7 @@ export class UI {
     }
     if (!contractsUnlocked) {
       this.el.contractCard.classList.remove('open');
+      this.updateStoryWidgetPosition();
     }
     if (this.el.shopRealCard) this.el.shopRealCard.hidden = !purchased;
     if (this.el.shopThermalCard) this.el.shopThermalCard.hidden = !purchased;
