@@ -18,6 +18,8 @@ const AUTO_SPIN = 0.035; // радиан в секунду, собственно
 const MOON_RADIUS = 0.38;
 const MOON_ORBIT_SPEED = 0.02;
 const SUN_ORBIT_SPEED = 0.003; // полный оборот примерно за 35 минут
+const SUN_DISTANCE = 120;
+const SUN_SPRITE_SCALE = 18;
 const ECLIPSE_IN = 5;
 const ECLIPSE_HOLD = 15;
 const ECLIPSE_OUT = 6;
@@ -204,8 +206,8 @@ export function createWorld(canvas, onSelect) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   }));
-  sunSprite.position.copy(sunDir).multiplyScalar(30);
-  sunSprite.scale.setScalar(4.5);
+  sunSprite.position.copy(sunDir).multiplyScalar(SUN_DISTANCE);
+  sunSprite.scale.setScalar(SUN_SPRITE_SCALE);
   scene.add(sunSprite);
 
   // Земля.
@@ -605,7 +607,7 @@ export function createWorld(canvas, onSelect) {
     sunOrbitAngle += SUN_ORBIT_SPEED * dt;
     sunDir.copy(sunBaseDir).applyAxisAngle(sunAxis, sunOrbitAngle).normalize();
     sunLight.position.copy(sunDir).multiplyScalar(20);
-    sunSprite.position.copy(sunDir).multiplyScalar(30);
+    sunSprite.position.copy(sunDir).multiplyScalar(SUN_DISTANCE);
 
     for (const entry of satellites.values()) {
       entry.phase += entry.speed * dt;
@@ -1002,6 +1004,8 @@ export function createWorld(canvas, onSelect) {
         cameraOrbit: { azimuth, polar },
         planetSpin: -earthSpinGroup.rotation.y,
         hasSun: Boolean(sunSprite.parent),
+        sunDistance: Math.round(sunSprite.position.length() * 100) / 100,
+        sunScale: sunSprite.scale.x,
         sunScreen: (() => {
           const v = sunSprite.position.clone().project(camera);
           return {
