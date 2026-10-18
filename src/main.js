@@ -12,11 +12,24 @@ world.syncSatellites(game.state.satellites);
 world.setContract(game.state.story?.contractsUnlocked ? game.state.contract : null);
 ui.render(game.state);
 
-let lastContractId = game.state.contract ? game.state.contract.id : null;
+function contractKey(state) {
+  if (!state.contract) return null;
+  const shots = Array.isArray(state.contract.targets)
+    ? state.contract.targets.filter(target => target.shot).length
+    : state.contract.shots;
+  return [
+    state.contract.id,
+    shots,
+    state.story?.contractsUnlocked ? 1 : 0,
+  ].join(':');
+}
+
+let lastContractKey = contractKey(game.state);
 
 game.subscribe(state => {
-  if (state.contract && state.contract.id !== lastContractId) {
-    lastContractId = state.contract.id;
+  const nextContractKey = contractKey(state);
+  if (nextContractKey !== lastContractKey) {
+    lastContractKey = nextContractKey;
     world.setContract(state.story?.contractsUnlocked ? state.contract : null);
   }
   world.syncSatellites(state.satellites);

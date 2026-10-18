@@ -144,19 +144,67 @@ export class Game {
       'Мониторинг ледовой обстановки',
       'Обзор транспортного узла',
     ];
-    const lat = -55 + Math.random() * 110;
-    const lon = -180 + Math.random() * 360;
+    const targets = [];
+    for (let i = 0; i < BALANCE.contractRequired; i += 1) {
+      const lat = -55 + Math.random() * 110;
+      const lon = -180 + Math.random() * 360;
+      targets.push({
+        id: uid('target'),
+        lat: Math.round(lat * 10) / 10,
+        lon: Math.round(lon * 10) / 10,
+        shot: false,
+      });
+    }
+    const first = targets[0];
     return {
       id: uid('contract'),
       title: titles[Math.floor(Math.random() * titles.length)],
-      lat: Math.round(lat * 10) / 10,
-      lon: Math.round(lon * 10) / 10,
-      required: BALANCE.contractRequired,
+      lat: first.lat,
+      lon: first.lon,
+      targets,
+      required: targets.length,
       shots: 0,
       reward: options.first
         ? 40
         : BALANCE.contractRewardMin
           + Math.floor(Math.random() * (BALANCE.contractRewardMax - BALANCE.contractRewardMin + 1)),
+    };
+  }
+
+  normalizeContract(contract) {
+    if (!contract) return this.newContractData();
+    let targets = Array.isArray(contract.targets) ? contract.targets : [];
+    targets = targets
+      .filter(target => target && Number.isFinite(target.lat) && Number.isFinite(target.lon))
+      .map(target => ({
+        id: target.id || uid('target'),
+        lat: Math.round(target.lat * 10) / 10,
+        lon: Math.round(target.lon * 10) / 10,
+        shot: Boolean(target.shot),
+      }));
+
+    if (targets.length === 0) {
+      const baseLat = Number.isFinite(contract.lat) ? contract.lat : -20;
+      const baseLon = Number.isFinite(contract.lon) ? contract.lon : 0;
+      for (let i = 0; i < BALANCE.contractRequired; i += 1) {
+        const lat = i === 0 ? baseLat : -55 + Math.random() * 110;
+        const lon = i === 0 ? baseLon : -180 + Math.random() * 360;
+        targets.push({
+          id: uid('target'),
+          lat: Math.round(lat * 10) / 10,
+          lon: Math.round(lon * 10) / 10,
+          shot: false,
+        });
+      }
+    }
+
+    return {
+      ...contract,
+      targets,
+      lat: targets[0].lat,
+      lon: targets[0].lon,
+      required: targets.length,
+      shots: targets.filter(target => target.shot).length,
     };
   }
 
@@ -223,7 +271,7 @@ export class Game {
     return true;
   }
 
-  doAction(angleToContract = null) {
+  doAction(angleToContract = null, targetId = null) {
     const sat = this.selectedSatellite();
     if (!sat) return { ok: false, reason: 'Нет выбранного спутника' };
     if (sat.type !== 'mapper') return { ok: false, reason: 'Этот аппарат не ведёт съёмку' };
@@ -253,13 +301,19 @@ export class Game {
 
     const c = this.state.contract;
     const contractUnlocked = Boolean(this.state.story?.contractsUnlocked);
-    const overZone = angleToContract !== null && angleToContract <= CONTRACT_ANGLE;
-    if (contractUnlocked && c && c.shots < c.required && overZone) {
+    const targets = c && Array.isArray(c.targets) ? c.targets : [];
+    const target = targetId
+      ? targets.find(item => item.id === targetId && !item.shot)
+      : targets.find(item => !item.shot);
+    const overZone = target !== undefined && angleToContract !== null && angleToContract <= CONTRACT_ANGLE;
+    if (contractUnlocked && c && target && overZone) {
       shot = true;
-      c.shots += 1;
+      target.shot = true;
+      c.shots = targets.filter(item => item.shot).length;
+      c.required = targets.length;
       this.state.stats.shots += 1;
       if (c.shots >= c.required) {
-        completed = { ...c };
+        completed = { ...c, targets: c.targets.map(item => ({ ...item })) };
         this.state.balance += c.reward;
         this.state.stats.totalEarned += c.reward;
         this.state.stats.contracts += 1;
@@ -379,6 +433,7 @@ export class Game {
       this.state = Object.assign(this.defaultState(), data);
       this.state.story = Object.assign(this.defaultStory(), data.story || {});
       this.state.stats = Object.assign(this.defaultStats(), data.stats || {});
+      this.state.contract = this.normalizeContract(this.state.contract);
       if (!hadStory) {
         this.state.story.stage = STORY_STAGES.FIRST50;
       }

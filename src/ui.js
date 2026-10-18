@@ -795,8 +795,8 @@ export class UI {
 
   onAction() {
     const sat = this.game.selectedSatellite();
-    const angle = sat ? this.world.getAngleToContract(sat.id) : null;
-    const result = this.game.doAction(angle);
+    const target = sat ? this.nextContractTarget(sat.id) : null;
+    const result = this.game.doAction(target ? target.angle : null, target ? target.id : null);
 
     if (!result.ok) {
       this.toast(result.reason, 'warn');
@@ -828,6 +828,13 @@ export class UI {
     void this.el.btnAction.offsetWidth;
     this.el.btnAction.classList.add('pulse');
     setTimeout(() => this.el.btnAction.classList.remove('pulse'), 260);
+  }
+
+  nextContractTarget(satId) {
+    const targets = this.world.getContractAngles(satId) || [];
+    return targets
+      .filter(target => !target.shot)
+      .sort((a, b) => a.angle - b.angle)[0] || null;
   }
 
   toast(text, type = '') {
@@ -960,7 +967,8 @@ export class UI {
       this.el.energySatName.title = sat ? sat.name : '';
     }
     this.el.energyFill.classList.toggle('low', energyPct < 20);
-    const angle = sat ? this.world.getAngleToContract(sat.id) : null;
+    const nextTarget = sat ? this.nextContractTarget(sat.id) : null;
+    const angle = nextTarget ? nextTarget.angle : null;
     const overZone = angle !== null && angle <= CONTRACT_ANGLE;
 
     const contract = state.contract;

@@ -339,8 +339,8 @@ export function createWorld(canvas, onSelect) {
   // Спутники.
   const satellites = new Map();
   let contract = null;
-  let contractMarker = null;
-  let contractLocal = null;
+  let contractMarkers = [];
+  let contractTargets = [];
   let elapsed = 0;
 
   // Конус наблюдения: кратковременный луч от спутника к поверхности.
@@ -470,77 +470,121 @@ export function createWorld(canvas, onSelect) {
     }
   }
 
-  function setContract(next) {
-    contract = next;
-    if (contractMarker) {
-      contractMarker.traverse(obj => {
+  function disposeContractMarkers() {
+    for (const marker of contractMarkers) {
+      marker.traverse(obj => {
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
           if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
           else obj.material.dispose();
         }
       });
-      earthSpinGroup.remove(contractMarker);
-      contractMarker = null;
+      earthSpinGroup.remove(marker);
     }
-    contractLocal = null;
-    if (!next) return;
-
-    contractLocal = latLonToVec3(next.lat, next.lon, CONTRACT_RADIUS);
-    const group = new THREE.Group();
-    group.position.copy(contractLocal);
-    group.quaternion.setFromUnitVectors(
-      new THREE.Vector3(0, 0, 1),
-      contractLocal.clone().normalize()
-    );
-
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.055, 0.088, 40),
-      new THREE.MeshBasicMaterial({
-        color: 0x59f2b2,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.95,
-        depthWrite: false,
-      })
-    );
-    group.add(ring);
-
-    const dot = new THREE.Mesh(
-      new THREE.CircleGeometry(0.018, 24),
-      new THREE.MeshBasicMaterial({ color: 0x59f2b2, transparent: true, opacity: 0.9, depthWrite: false })
-    );
-    dot.position.z = 0.002;
-    group.add(dot);
-
-    const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.006, 0.012, 0.42, 8, 1, true),
-      new THREE.MeshBasicMaterial({
-        color: 0x59f2b2,
-        transparent: true,
-        opacity: 0.18,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      })
-    );
-    beam.rotation.x = Math.PI / 2;
-    beam.position.z = 0.21;
-    group.add(beam);
-
-    group.userData.isContractMarker = true;
-    earthSpinGroup.add(group);
-    contractMarker = group;
+    contractMarkers = [];
+    contractTargets = [];
   }
 
-  function getAngleToContract(satId) {
-    if (!contractLocal) return null;
+  function setContract(next) {
+    contract = next;
+    disposeContractMarkers();
+    if (!next) return;
+
+    const targets = Array.isArray(next.targets) && next.targets.length
+      ? next.targets
+      : [{ id: 'legacy-target', lat: next.lat, lon: next.lon, shot: false }];
+
+    targets.forEach((target, index) => {
+      const local = latLonToVec3(target.lat, target.lon, CONTRACT_RADIUS);
+      const done = Boolean(target.shot);
+      const color = done ? 0x4a8d7a : 0x59f2b2;
+      const group = new THREE.Group();
+      group.position.copy(local);
+      group.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        local.clone().normalize()
+      );
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.055, 0.088, 40),
+        new THREE.MeshBasicMaterial({
+          color,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: done ? 0.22 : 0.95,
+          depthWrite: false,
+        })
+      );
+      group.add(ring);
+
+      const dot = new THREE.Mesh(
+        new THREE.CircleGeometry(0.018, 24),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: done ? 0.2 : 0.9,
+          depthWrite: false,
+        })
+      );
+      dot.position.z = 0.002;
+      group.add(dot);
+
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.006, 0.012, 0.42, 8, 1, true),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: done ? 0.05 : 0.18,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        })
+      );
+      beam.rotation.x = Math.PI / 2;
+      beam.position.z = 0.21;
+      group.add(beam);
+
+      group.scale.setScalar(done ? 0.75 : 1);
+      group.userData.isContractMarker = true;
+      group.userData.targetId = target.id || 'target-' + index;
+      group.userData.done = done;
+      group.userData.phase = index * 0.9;
+      earthSpinGroup.add(group);
+      contractMarkers.push(group);
+      contractTargets.push({
+        id: target.id || 'target-' + index,
+        local,
+        group,
+        shot: done,
+      });
+    });
+  }
+
+  function getContractAngles(satId) {
     const entry = satellites.get(satId);
-    if (!entry) return null;
+    if (!entry || contractTargets.length === 0) return [];
     earthGroup.updateMatrixWorld(true);
     const satPos = new THREE.Vector3();
     entry.mesh.getWorldPosition(satPos);
-    const contractWorld = earthSpinGroup.localToWorld(contractLocal.clone());
-    return satPos.clone().normalize().angleTo(contractWorld.clone().normalize());
+    const satDir = satPos.clone().normalize();
+    return contractTargets.map(target => {
+      const world = earthSpinGroup.localToWorld(target.local.clone()).normalize();
+      return {
+        id: target.id,
+        angle: satDir.angleTo(world),
+        shot: target.shot,
+      };
+    });
+  }
+
+  function getAngleToContract(satId, targetId = null) {
+    const targets = getContractAngles(satId);
+    if (targets.length === 0) return null;
+    if (targetId) {
+      const target = targets.find(item => item.id === targetId);
+      return target ? target.angle : null;
+    }
+    const next = targets.find(item => !item.shot);
+    return next ? next.angle : null;
   }
 
   function getSunlitMap() {
@@ -653,8 +697,10 @@ export function createWorld(canvas, onSelect) {
       solarCone.visible = false;
     }
 
-    if (contractMarker) {
-      contractMarker.scale.setScalar(1 + 0.10 * Math.sin(elapsed * 3));
+    for (const marker of contractMarkers) {
+      if (marker.userData.done) continue;
+      const phase = marker.userData.phase || 0;
+      marker.scale.setScalar(1 + 0.10 * Math.sin(elapsed * 3 + phase));
     }
 
     if (elapsed < observationUntil && observationSatId) {
@@ -893,6 +939,7 @@ export function createWorld(canvas, onSelect) {
     },
     setContract,
     getAngleToContract,
+    getContractAngles,
     getSunlitMap,
     isPointSunlit(x, y, z, sunDirection = null) {
       const position = new THREE.Vector3(x, y, z);
@@ -913,8 +960,9 @@ export function createWorld(canvas, onSelect) {
         satellites: satellites.size,
         calls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
-        hasContract: Boolean(contractMarker),
-        contractMarkers: earthSpinGroup.children.filter(c => c.userData.isContractMarker).length,
+        hasContract: contractMarkers.length > 0,
+        contractMarkers: contractMarkers.length,
+        contractTargets: contractTargets.length,
         moon: (() => {
           const v = new THREE.Vector3();
           moonMesh.getWorldPosition(v);
