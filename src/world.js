@@ -163,28 +163,159 @@ export function createWorld(canvas, onSelect) {
   scene.add(sunLight);
   scene.add(new THREE.AmbientLight(0x1b2a44, 1.35));
 
-  // Звёздный фон.
-  const starPositions = new Float32Array(2400 * 3);
-  for (let i = 0; i < 2400; i += 1) {
-    const u = Math.random() * 2 - 1;
-    const a = Math.random() * Math.PI * 2;
-    const s = Math.sqrt(1 - u * u);
-    const r = 40 + Math.random() * 70;
-    starPositions[i * 3] = s * Math.cos(a) * r;
-    starPositions[i * 3 + 1] = u * r;
-    starPositions[i * 3 + 2] = s * Math.sin(a) * r;
+  // Космический фон: несколько далёких слоёв звёзд, полоса Млечного
+  // Пути и слабые туманности. Радиусы намеренно намного больше камеры,
+  // чтобы при отдалении не возникало ощущения близких звёзд.
+  const starfield = new THREE.Group();
+  scene.add(starfield);
+  const starfieldStats = {
+    layers: 0,
+    stars: 0,
+    minRadius: Infinity,
+    maxRadius: 0,
+    nebulas: 0,
+  };
+
+  function createStarLayer({
+    count,
+    radiusMin,
+    radiusMax,
+    size,
+    color,
+    opacity,
+    band = false,
+    bandWidth = 0.2,
+    renderOrder = -2,
+  }) {
+    const positions = new Float32Array(count * 3);
+    const normal = new THREE.Vector3(0.36, 0.82, 0.44).normalize();
+    const helper = new THREE.Vector3(1, 0, 0);
+    const basisU = new THREE.Vector3().crossVectors(normal, helper).normalize();
+    const basisV = new THREE.Vector3().crossVectors(normal, basisU).normalize();
+
+    for (let i = 0; i < count; i += 1) {
+      let x;
+      let y;
+      let z;
+      if (band) {
+        const phi = Math.random() * Math.PI * 2;
+        const offset = (Math.random() - 0.5) * bandWidth;
+        const cos = Math.cos(phi);
+        const sin = Math.sin(phi);
+        x = basisU.x * cos + basisV.x * sin + normal.x * offset;
+        y = basisU.y * cos + basisV.y * sin + normal.y * offset;
+        z = basisU.z * cos + basisV.z * sin + normal.z * offset;
+      } else {
+        const u = Math.random() * 2 - 1;
+        const a = Math.random() * Math.PI * 2;
+        const s = Math.sqrt(1 - u * u);
+        x = s * Math.cos(a);
+        y = u;
+        z = s * Math.sin(a);
+      }
+
+      const length = Math.hypot(x, y, z) || 1;
+      const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
+      positions[i * 3] = (x / length) * radius;
+      positions[i * 3 + 1] = (y / length) * radius;
+      positions[i * 3 + 2] = (z / length) * radius;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const points = new THREE.Points(geometry, new THREE.PointsMaterial({
+      color,
+      size,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    points.renderOrder = renderOrder;
+    starfield.add(points);
+    starfieldStats.layers += 1;
+    starfieldStats.stars += count;
+    starfieldStats.minRadius = Math.min(starfieldStats.minRadius, radiusMin);
+    starfieldStats.maxRadius = Math.max(starfieldStats.maxRadius, radiusMax);
+    return points;
   }
-  const starGeometry = new THREE.BufferGeometry();
-  starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-  const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({
+
+  createStarLayer({
+    count: 3400,
+    radiusMin: 220,
+    radiusMax: 280,
+    size: 0.9,
+    color: 0xdce9ff,
+    opacity: 0.9,
+    renderOrder: -3,
+  });
+  createStarLayer({
+    count: 850,
+    radiusMin: 160,
+    radiusMax: 210,
+    size: 0.72,
     color: 0x9fc4ff,
-    size: 0.32,
-    sizeAttenuation: true,
-    transparent: true,
-    opacity: 0.75,
-    depthWrite: false,
-  }));
-  scene.add(stars);
+    opacity: 0.72,
+  });
+  createStarLayer({
+    count: 260,
+    radiusMin: 130,
+    radiusMax: 180,
+    size: 0.62,
+    color: 0xffd9a8,
+    opacity: 0.55,
+  });
+  createStarLayer({
+    count: 950,
+    radiusMin: 210,
+    radiusMax: 270,
+    size: 0.55,
+    color: 0xcddcff,
+    opacity: 0.48,
+    band: true,
+    bandWidth: 0.22,
+    renderOrder: -2,
+  });
+
+  // Мягкие туманности: почти прозрачные цветные пятна на дальнем плане.
+  const nebulaCanvas = document.createElement('canvas');
+  nebulaCanvas.width = 256;
+  nebulaCanvas.height = 256;
+  const nebulaCtx = nebulaCanvas.getContext('2d');
+  const nebulaGradient = nebulaCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  nebulaGradient.addColorStop(0, 'rgba(255,255,255,0.75)');
+  nebulaGradient.addColorStop(0.28, 'rgba(255,255,255,0.28)');
+  nebulaGradient.addColorStop(0.62, 'rgba(255,255,255,0.07)');
+  nebulaGradient.addColorStop(1, 'rgba(255,255,255,0)');
+  nebulaCtx.fillStyle = nebulaGradient;
+  nebulaCtx.fillRect(0, 0, 256, 256);
+  const nebulaTexture = new THREE.CanvasTexture(nebulaCanvas);
+  nebulaTexture.colorSpace = THREE.SRGBColorSpace;
+
+  const nebulaSpecs = [
+    { direction: new THREE.Vector3(-0.9, 0.2, -0.35), color: 0x315f9c, scale: 150, opacity: 0.09 },
+    { direction: new THREE.Vector3(0.62, -0.35, 0.7), color: 0x4f3f8e, scale: 120, opacity: 0.07 },
+    { direction: new THREE.Vector3(0.25, 0.82, -0.5), color: 0x2f6e7a, scale: 110, opacity: 0.06 },
+    { direction: new THREE.Vector3(-0.45, -0.55, 0.7), color: 0x755079, scale: 140, opacity: 0.055 },
+    { direction: new THREE.Vector3(0.9, 0.25, 0.35), color: 0x3d5f9c, scale: 130, opacity: 0.05 },
+  ];
+
+  for (const spec of nebulaSpecs) {
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: nebulaTexture,
+      color: spec.color,
+      transparent: true,
+      opacity: spec.opacity,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    sprite.position.copy(spec.direction.normalize()).multiplyScalar(235);
+    sprite.scale.setScalar(spec.scale);
+    sprite.renderOrder = -4;
+    starfield.add(sprite);
+    starfieldStats.nebulas += 1;
+  }
 
   // Видимое солнце: мировая точка, вокруг которой вращается камера.
   const sunCanvas = document.createElement('canvas');
@@ -1004,6 +1135,7 @@ export function createWorld(canvas, onSelect) {
         cameraOrbit: { azimuth, polar },
         planetSpin: -earthSpinGroup.rotation.y,
         hasSun: Boolean(sunSprite.parent),
+        starfield: { ...starfieldStats },
         sunDistance: Math.round(sunSprite.position.length() * 100) / 100,
         sunScale: sunSprite.scale.x,
         sunScreen: (() => {
