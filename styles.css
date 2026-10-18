@@ -195,7 +195,7 @@ html, body {
 
 .story-collapsed-avatar {
   width: 34px;
-  height: 44px;
+  height: 40px;
   border-radius: 9px;
   object-fit: cover;
   object-position: center top;
@@ -242,8 +242,8 @@ html, body {
 
 .story-avatar {
   flex: 0 0 auto;
-  width: 78px;
-  height: 104px;
+  width: 84px;
+  height: 96px;
   border-radius: 12px;
   object-fit: cover;
   object-position: center top;
@@ -1103,8 +1103,8 @@ html, body {
   .left-stack { gap: 6px; }
   .story-widget { left: 10px; top: 102px; }
   .story-card { width: calc(100vw - 20px); padding: 8px; gap: 8px; }
-  .story-avatar { width: 64px; height: 86px; }
-  .story-collapsed-avatar { width: 30px; height: 40px; }
+  .story-avatar { width: 66px; height: 78px; }
+  .story-collapsed-avatar { width: 30px; height: 36px; }
   .story-collapsed { font-size: 11px; }
   .story-body p { font-size: 10px; }
   .story-meta { font-size: 8px; }
