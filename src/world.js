@@ -415,6 +415,7 @@ export function createWorld(canvas, onSelect) {
   let focusSatelliteId = null;
   let focusZoom = 1;
   let savedView = null;
+  let selectedSatelliteIds = new Set();
   const focusTarget = new THREE.Vector3();
 
   const sunDir = new THREE.Vector3(5, 0, 3.2).normalize();
@@ -899,9 +900,11 @@ export function createWorld(canvas, onSelect) {
     list.forEach((sat, index) => {
       if (!satellites.has(sat.id)) createSatellite(sat, index);
     });
+    selectedSatelliteIds = new Set(
+      list.filter(sat => sat.selected).map(sat => sat.id)
+    );
     for (const [id, entry] of satellites) {
-      const selected = list.some(s => s.id === id && s.selected);
-      entry.ring.visible = selected;
+      entry.ring.visible = selectedSatelliteIds.has(id) && focusSatelliteId !== id;
     }
   }
 
@@ -1244,6 +1247,7 @@ export function createWorld(canvas, onSelect) {
     spinPolar = 0;
     focusSatelliteId = id;
     focusZoom = 1;
+    if (entry.ring) entry.ring.visible = false;
     applyCamera();
     return true;
   }
@@ -1259,6 +1263,9 @@ export function createWorld(canvas, onSelect) {
       polar = savedView.polar;
       zoomFactor = savedView.zoomFactor;
       savedView = null;
+    }
+    for (const [id, entry] of satellites) {
+      entry.ring.visible = selectedSatelliteIds.has(id);
     }
     applyCamera();
     return true;
@@ -1585,6 +1592,7 @@ export function createWorld(canvas, onSelect) {
         altitudeKm: entry.altitudeKm,
         longitudeDeg: entry.longitudeDeg,
         visualScale: entry.mesh.scale.x,
+        selectedRing: entry.ring.visible,
         solarPanels: entry.mesh.userData.solarPanels?.length || 0,
         periodSec: (Math.PI * 2) / Math.abs(entry.speed),
         speed: entry.speed,
