@@ -339,17 +339,18 @@ function buildSatelliteMesh(type) {
       new THREE.SphereGeometry(0.18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
       mats.dish
     );
-    dish.rotation.x = Math.PI;
-    dish.position.y = -0.16;
+    // Чаша должна открываться вниз, к Земле: верхняя полусфера без
+    // переворота, вершиной к корпусу.
+    dish.position.y = -0.30;
     group.add(dish);
 
     for (let i = 0; i < 3; i += 1) {
       const angle = (Math.PI * 2 * i) / 3;
       const strut = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.006, 0.006, 0.15, 6),
+        new THREE.CylinderGeometry(0.006, 0.006, 0.18, 6),
         mats.frame
       );
-      strut.position.set(Math.cos(angle) * 0.13, -0.19, Math.sin(angle) * 0.13);
+      strut.position.set(Math.cos(angle) * 0.13, -0.21, Math.sin(angle) * 0.13);
       group.add(strut);
     }
 
@@ -357,7 +358,7 @@ function buildSatelliteMesh(type) {
       new THREE.CylinderGeometry(0.012, 0.022, 0.13, 8),
       mats.gold
     );
-    feed.position.y = -0.23;
+    feed.position.y = -0.33;
     group.add(feed);
   } else {
     const lensRing = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.008, 8, 24), mats.frame);
