@@ -312,16 +312,18 @@ function buildSatelliteMesh(type) {
   band.position.z = 0.02;
   group.add(band);
 
-  const antennaMast = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.006, 0.006, 0.13, 6),
-    mats.frame
-  );
-  antennaMast.position.y = 0.17;
-  group.add(antennaMast);
+  if (!isRelay) {
+    const antennaMast = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.006, 0.006, 0.13, 6),
+      mats.frame
+    );
+    antennaMast.position.y = 0.17;
+    group.add(antennaMast);
 
-  const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), mats.frame);
-  antennaTip.position.y = 0.24;
-  group.add(antennaTip);
+    const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), mats.frame);
+    antennaTip.position.y = 0.24;
+    group.add(antennaTip);
+  }
 
   for (const x of [-0.055, 0.055]) {
     const thruster = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.055, 8), mats.dark);
@@ -347,12 +349,27 @@ function buildSatelliteMesh(type) {
 
     for (let i = 0; i < 3; i += 1) {
       const angle = (Math.PI * 2 * i) / 3;
+      const start = new THREE.Vector3(
+        Math.cos(angle) * 0.065,
+        Math.sin(angle) * 0.065,
+        -0.10
+      );
+      const end = new THREE.Vector3(
+        Math.cos(angle) * 0.17,
+        Math.sin(angle) * 0.17,
+        -0.30
+      );
+      const direction = end.clone().sub(start);
       const strut = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.006, 0.006, 0.18, 6),
+        new THREE.CylinderGeometry(0.005, 0.005, direction.length(), 6),
         mats.frame
       );
-      strut.rotation.x = Math.PI / 2;
-      strut.position.set(Math.cos(angle) * 0.13, Math.sin(angle) * 0.13, -0.21);
+      strut.position.copy(start).add(end).multiplyScalar(0.5);
+      strut.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize()
+      );
+      strut.userData.isRelayStrut = true;
       group.add(strut);
     }
 
@@ -361,7 +378,8 @@ function buildSatelliteMesh(type) {
       mats.gold
     );
     feed.rotation.x = Math.PI / 2;
-    feed.position.z = -0.33;
+    feed.position.set(0, 0, -0.33);
+    feed.userData.isRelayFeed = true;
     group.add(feed);
   } else {
     const lensRing = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.008, 8, 24), mats.frame);
