@@ -412,6 +412,10 @@ export function createWorld(canvas, onSelect) {
   let zoomFactor = 1;
   let azimuth = 0;
   let polar = Math.atan2(1, 0.18);
+  let focusSatelliteId = null;
+  let focusZoom = 1;
+  let savedView = null;
+  const focusTarget = new THREE.Vector3();
 
   const sunDir = new THREE.Vector3(5, 0, 3.2).normalize();
   const sunBaseDir = sunDir.clone();
@@ -886,6 +890,12 @@ export function createWorld(canvas, onSelect) {
       }
     }
 
+    if (focusSatelliteId && !ids.has(focusSatelliteId)) {
+      focusSatelliteId = null;
+      savedView = null;
+      focusZoom = 1;
+    }
+
     list.forEach((sat, index) => {
       if (!satellites.has(sat.id)) createSatellite(sat, index);
     });
@@ -1166,6 +1176,8 @@ export function createWorld(canvas, onSelect) {
         applyCamera();
       }
     }
+
+    if (focusSatelliteId) applyCamera();
   }
 
   function render() {
@@ -1178,19 +1190,36 @@ export function createWorld(canvas, onSelect) {
     return aspect < 0.8 ? 12.5 : (aspect < 1.2 ? 10.5 : 8.8);
   }
 
+  function focusDistanceForAspect(aspect) {
+    const vertical = THREE.MathUtils.degToRad(camera.fov / 2);
+    const horizontal = Math.atan(Math.tan(vertical) * aspect);
+    const half = Math.min(vertical, horizontal);
+    return (1.02 / Math.tan(half)) * 1.32;
+  }
+
   function applyCamera() {
     const width = canvas.clientWidth || window.innerWidth;
     const height = canvas.clientHeight || window.innerHeight;
     const aspect = width / height;
-    const distance = baseDistance(aspect) * zoomFactor;
+    const focused = focusSatelliteId ? satellites.get(focusSatelliteId) : null;
+    if (focusSatelliteId && !focused) {
+      focusSatelliteId = null;
+      savedView = null;
+      focusZoom = 1;
+    }
+    const distance = focused
+      ? focusDistanceForAspect(aspect) * focusZoom
+      : baseDistance(aspect) * zoomFactor;
+    focusTarget.set(0, 0, 0);
+    if (focused) focused.mesh.getWorldPosition(focusTarget);
     const sinPolar = Math.sin(polar);
     camera.aspect = aspect;
     camera.position.set(
-      distance * sinPolar * Math.sin(azimuth),
-      distance * Math.cos(polar),
-      distance * sinPolar * Math.cos(azimuth)
+      focusTarget.x + distance * sinPolar * Math.sin(azimuth),
+      focusTarget.y + distance * Math.cos(polar),
+      focusTarget.z + distance * sinPolar * Math.cos(azimuth)
     );
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(focusTarget);
     camera.updateProjectionMatrix();
   }
 
@@ -1205,20 +1234,56 @@ export function createWorld(canvas, onSelect) {
     return THREE.MathUtils.clamp(distance / baseDistance(aspect), MIN_ZOOM, MAX_ZOOM);
   }
 
+  function focusSatellite(id) {
+    const entry = satellites.get(id);
+    if (!entry) return false;
+    if (!focusSatelliteId) {
+      savedView = { azimuth, polar, zoomFactor };
+    }
+    spinAzimuth = 0;
+    spinPolar = 0;
+    focusSatelliteId = id;
+    focusZoom = 1;
+    applyCamera();
+    return true;
+  }
+
+  function focusEarth() {
+    if (!focusSatelliteId) return false;
+    focusSatelliteId = null;
+    focusZoom = 1;
+    spinAzimuth = 0;
+    spinPolar = 0;
+    if (savedView) {
+      azimuth = savedView.azimuth;
+      polar = savedView.polar;
+      zoomFactor = savedView.zoomFactor;
+      savedView = null;
+    }
+    applyCamera();
+    return true;
+  }
+
   function zoomToOrbit(radius) {
+    if (focusSatelliteId) focusEarth();
     zoomFactor = zoomForRadius(radius);
     applyCamera();
     return zoomFactor;
   }
 
   function setZoom(value) {
+    if (focusSatelliteId) {
+      focusZoom = THREE.MathUtils.clamp(Number(value) || 1, 0.55, 2.5);
+      applyCamera();
+      return focusZoom;
+    }
     zoomFactor = THREE.MathUtils.clamp(Number(value) || 1, MIN_ZOOM, MAX_ZOOM);
     applyCamera();
     return zoomFactor;
   }
 
   function getZoom() {
-    return zoomFactor;
+    return focusSatelliteId ? focusZoom : zoomFactor;
   }
 
   function resize() {
@@ -1263,7 +1328,7 @@ export function createWorld(canvas, onSelect) {
     } else if (activePointers.size === 2) {
       dragging = false;
       pinchStartDistance = pointerDistance();
-      pinchStartZoom = zoomFactor;
+      pinchStartZoom = focusSatelliteId ? focusZoom : zoomFactor;
     }
   });
 
@@ -1274,11 +1339,19 @@ export function createWorld(canvas, onSelect) {
     if (activePointers.size >= 2) {
       const distance = pointerDistance();
       if (pinchStartDistance > 0 && distance > 0) {
-        zoomFactor = THREE.MathUtils.clamp(
-          pinchStartZoom * (pinchStartDistance / distance),
-          MIN_ZOOM,
-          MAX_ZOOM
-        );
+        if (focusSatelliteId) {
+          focusZoom = THREE.MathUtils.clamp(
+            pinchStartZoom * (pinchStartDistance / distance),
+            0.55,
+            2.5
+          );
+        } else {
+          zoomFactor = THREE.MathUtils.clamp(
+            pinchStartZoom * (pinchStartDistance / distance),
+            MIN_ZOOM,
+            MAX_ZOOM
+          );
+        }
         applyCamera();
       }
       e.preventDefault();
@@ -1323,7 +1396,11 @@ export function createWorld(canvas, onSelect) {
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     const factor = Math.exp(e.deltaY * 0.0012);
-    zoomFactor = THREE.MathUtils.clamp(zoomFactor * factor, MIN_ZOOM, MAX_ZOOM);
+    if (focusSatelliteId) {
+      focusZoom = THREE.MathUtils.clamp(focusZoom * factor, 0.55, 2.5);
+    } else {
+      zoomFactor = THREE.MathUtils.clamp(zoomFactor * factor, MIN_ZOOM, MAX_ZOOM);
+    }
     applyCamera();
   }, { passive: false });
 
@@ -1360,6 +1437,8 @@ export function createWorld(canvas, onSelect) {
     update,
     syncSatellites,
     updateSatelliteOrbit,
+    focusSatellite,
+    focusEarth,
     zoomToOrbit,
     setZoom,
     getZoom,
@@ -1455,7 +1534,9 @@ export function createWorld(canvas, onSelect) {
         observation: observationCone.visible,
         textureLoaded: Boolean(earthTexture.image && earthTexture.image.width),
         camera: { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov },
-        zoom: zoomFactor,
+        zoom: focusSatelliteId ? focusZoom : zoomFactor,
+        focusSatelliteId,
+        focusZoom,
         cameraOrbit: { azimuth, polar },
         planetSpin: -earthSpinGroup.rotation.y,
         hasSun: Boolean(sunSprite.parent),

@@ -461,7 +461,11 @@ export class UI {
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
-    if (this.el.satSheet) this.el.satSheet.classList.remove('orbit-mode');
+    if (this.el.satSheet) {
+      this.el.satSheet.classList.remove('orbit-mode');
+      this.el.satSheet.classList.remove('focus-mode');
+    }
+    this.world.focusEarth();
   }
 
   backToSatList() {
@@ -469,7 +473,7 @@ export class UI {
     this.togglePanel('panel-satellites');
   }
 
-  showSatDetail(id) {
+  showSatDetail(id, options = {}) {
     const sat = this.game.state.satellites.find(s => s.id === id);
     if (!sat || !this.el.satSheet) return;
     this.closePanels();
@@ -477,9 +481,13 @@ export class UI {
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
-    if (this.el.satSheet) this.el.satSheet.classList.remove('orbit-mode');
+    if (this.el.satSheet) {
+      this.el.satSheet.classList.remove('orbit-mode');
+      this.el.satSheet.classList.toggle('focus-mode', options.focus !== false);
+    }
     this.el.satSheet.hidden = false;
     this.renderSatDetail(id);
+    if (options.focus !== false) this.world.focusSatellite(id);
   }
 
   showSatelliteView() {
@@ -819,7 +827,7 @@ export class UI {
     }
     this.toast('Куплен ' + result.sat.name + ': +$' + RELAY_INCOME.toFixed(2) + '/сек', 'ok');
     this.closePanels();
-    this.showSatDetail(result.sat.id);
+    this.showSatDetail(result.sat.id, { focus: false });
     this.openOrbitEditor();
   }
 

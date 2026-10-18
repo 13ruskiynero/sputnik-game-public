@@ -624,6 +624,11 @@ html, body {
 .sat-sheet[hidden] {
   display: none;
 }
+.sat-sheet.focus-mode {
+  background: rgba(5, 10, 20, 0.26);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+}
 
 .sat-sheet.orbit-mode {
   background: rgba(5, 10, 20, 0.2);
