@@ -92,8 +92,43 @@
       <h2>Спутники</h2>
       <button class="close" type="button" data-close aria-label="Закрыть">✕</button>
     </div>
-    <div id="sat-list" class="sat-list"></div>
-    <p class="panel-note">На солнце +2/сек. У картографа в тени заряд не тратится; у связи в тени −2/сек, на солнце +2/сек.</p>
+
+    <div id="sat-list-view">
+      <div id="sat-list" class="sat-list"></div>
+      <p class="panel-note">Нажмите на аппарат, чтобы открыть его параметры. На солнце +2/сек. У картографа в тени заряд не тратится; у связи в тени −2/сек, на солнце +2/сек.</p>
+    </div>
+
+    <div id="sat-detail" class="sat-detail" hidden>
+      <button id="btn-sat-back" class="back-btn" type="button">← Все спутники</button>
+      <div class="sat-detail-head">
+        <div>
+          <h3 id="sat-detail-name">Картограф-1</h3>
+          <p id="sat-detail-subtitle" class="sat-detail-subtitle">Картограф · Полярная</p>
+        </div>
+      </div>
+
+      <div class="sat-detail-energy">
+        <div class="sat-detail-energy-row">
+          <span>Энергия</span>
+          <strong id="sat-detail-energy">100%</strong>
+        </div>
+        <div class="energy-bar"><i id="sat-detail-energy-fill"></i></div>
+      </div>
+
+      <dl class="sat-detail-facts">
+        <div><dt>Работа</dt><dd id="sat-detail-work">Картографирование поверхности</dd></div>
+        <div><dt>Орбита</dt><dd id="sat-detail-orbit">Полярная · 90°</dd></div>
+        <div><dt>Расстояние</dt><dd id="sat-detail-distance">2.15 ед. от центра</dd></div>
+        <div><dt>Высота</dt><dd id="sat-detail-altitude">0.65 ед. над поверхностью</dd></div>
+        <div><dt>Период</dt><dd id="sat-detail-period">28.6 с</dd></div>
+        <div><dt>Прибор</dt><dd id="sat-detail-instrument">Оптическая камера</dd></div>
+        <div><dt>Разрешение</dt><dd id="sat-detail-resolution">Низкое</dd></div>
+        <div><dt>Угол обзора</dt><dd id="sat-detail-fov">±16°</dd></div>
+        <div><dt>Скорость</dt><dd id="sat-detail-speed">0.22 рад/с</dd></div>
+      </dl>
+
+      <p id="sat-detail-note" class="panel-note">Снимает участки поверхности. Для снимка нужен пролёт над зоной контракта.</p>
+    </div>
   </section>
 
   <section id="panel-shop" class="panel" aria-label="Магазин">

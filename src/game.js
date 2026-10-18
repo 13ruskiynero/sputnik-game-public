@@ -10,6 +10,27 @@ export const CONTRACT_ANGLE = 0.42; // ~24 градуса
 export const RELAY_COST = 25;
 export const RELAY_INCOME = 0.05;
 
+export const SATELLITE_SPECS = {
+  mapper: {
+    kind: 'Картограф',
+    role: 'Картографирование поверхности',
+    instrument: 'Оптическая камера',
+    orbitLabel: 'Полярная',
+    resolution: 'Низкое',
+    fovDeg: 16,
+    note: 'Снимает участки поверхности. Для снимка нужен пролёт над зоной контракта.',
+  },
+  relay: {
+    kind: 'Связь',
+    role: 'Связь и ретрансляция',
+    instrument: 'Антенна и ретранслятор',
+    orbitLabel: 'Наклонная низкая',
+    resolution: '—',
+    fovDeg: null,
+    note: 'Передаёт данные и приносит пассивный доход +$0.05/сек. В тени расходует заряд.',
+  },
+};
+
 const SAVE_KEY = 'sputnik-save-v1';
 
 function uid(prefix) {

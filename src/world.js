@@ -858,6 +858,18 @@ export function createWorld(canvas, onSelect) {
       entry.mesh.getWorldPosition(v);
       return { x: v.x, y: v.y, z: v.z };
     },
+    getSatelliteInfo(id) {
+      const entry = satellites.get(id);
+      if (!entry) return null;
+      return {
+        distance: entry.radius,
+        altitude: entry.radius - EARTH_RADIUS,
+        periodSec: (Math.PI * 2) / Math.abs(entry.speed),
+        speed: entry.speed,
+        inclinationDeg: THREE.MathUtils.radToDeg(entry.orbitGroup.rotation.x),
+        nodeDeg: THREE.MathUtils.radToDeg(entry.orbitGroup.rotation.y),
+      };
+    },
     getSatelliteLocalPosition(id) {
       const entry = satellites.get(id);
       if (!entry) return null;

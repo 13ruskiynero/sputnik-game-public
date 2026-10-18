@@ -1,4 +1,4 @@
-import { ACTION_ENERGY_COST, CLICKS_PER_DOLLAR, CONTRACT_ANGLE, RELAY_COST } from './game.js';
+import { ACTION_ENERGY_COST, CLICKS_PER_DOLLAR, CONTRACT_ANGLE, RELAY_COST, SATELLITE_SPECS } from './game.js';
 
 function formatMoney(value) {
   if (!Number.isFinite(value)) return '$0';
@@ -23,6 +23,7 @@ export class UI {
     this.time = time;
     this._satKey = '';
     this._zoneKey = '';
+    this._detailId = null;
 
     const $ = id => document.getElementById(id);
     this.el = {
@@ -38,6 +39,23 @@ export class UI {
       contractZone: $('contract-zone'),
       contractCard: $('contract-card'),
       btnSatellites: $('btn-satellites'),
+      satListView: $('sat-list-view'),
+      satDetail: $('sat-detail'),
+      btnSatBack: $('btn-sat-back'),
+      satDetailName: $('sat-detail-name'),
+      satDetailSubtitle: $('sat-detail-subtitle'),
+      satDetailEnergy: $('sat-detail-energy'),
+      satDetailEnergyFill: $('sat-detail-energy-fill'),
+      satDetailWork: $('sat-detail-work'),
+      satDetailInstrument: $('sat-detail-instrument'),
+      satDetailOrbit: $('sat-detail-orbit'),
+      satDetailDistance: $('sat-detail-distance'),
+      satDetailAltitude: $('sat-detail-altitude'),
+      satDetailPeriod: $('sat-detail-period'),
+      satDetailResolution: $('sat-detail-resolution'),
+      satDetailFov: $('sat-detail-fov'),
+      satDetailSpeed: $('sat-detail-speed'),
+      satDetailNote: $('sat-detail-note'),
       btnTasks: $('btn-tasks'),
       btnCloseContract: $('btn-close-contract'),
       btnShop: $('btn-shop'),
@@ -60,6 +78,7 @@ export class UI {
 
   bind() {
     this.el.btnSatellites.addEventListener('click', () => this.togglePanel('panel-satellites'));
+    if (this.el.btnSatBack) this.el.btnSatBack.addEventListener('click', () => this.showSatList());
     this.el.btnTasks.addEventListener('click', () => this.el.contractCard.classList.toggle('open'));
     this.el.btnCloseContract.addEventListener('click', () => this.el.contractCard.classList.remove('open'));
     this.el.btnShop.addEventListener('click', () => this.togglePanel('panel-shop'));
@@ -176,12 +195,71 @@ export class UI {
     }
   }
 
+  showSatList() {
+    this._detailId = null;
+    if (this.el.satListView) this.el.satListView.hidden = false;
+    if (this.el.satDetail) this.el.satDetail.hidden = true;
+  }
+
+  showSatDetail(id) {
+    const sat = this.game.state.satellites.find(s => s.id === id);
+    if (!sat || !this.el.satDetail || !this.el.satListView) return;
+    this._detailId = id;
+    this.renderSatDetail(id);
+    this.el.satListView.hidden = true;
+    this.el.satDetail.hidden = false;
+  }
+
+  renderSatDetail(id) {
+    if (!this.el.satDetailName) return;
+    const sat = this.game.state.satellites.find(s => s.id === id);
+    if (!sat) {
+      this.showSatList();
+      return;
+    }
+    const spec = SATELLITE_SPECS[sat.type] || {};
+    const info = this.world.getSatelliteInfo(id) || {};
+    const energy = Math.round(Math.max(0, Math.min(100, sat.energy)));
+    const inclination = Number.isFinite(info.inclinationDeg)
+      ? Math.abs(info.inclinationDeg).toFixed(0) + '°'
+      : null;
+
+    this.el.satDetailName.textContent = sat.name;
+    this.el.satDetailSubtitle.textContent =
+      [spec.kind, spec.orbitLabel].filter(Boolean).join(' · ');
+    this.el.satDetailEnergy.textContent = energy + '%';
+    this.el.satDetailEnergyFill.style.width = energy + '%';
+    this.el.satDetailEnergyFill.classList.toggle('low', energy < 20);
+    this.el.satDetailWork.textContent = spec.role || '—';
+    this.el.satDetailInstrument.textContent = spec.instrument || '—';
+    this.el.satDetailOrbit.textContent =
+      [spec.orbitLabel, inclination].filter(Boolean).join(' · ') || '—';
+    this.el.satDetailDistance.textContent = Number.isFinite(info.distance)
+      ? info.distance.toFixed(2) + ' ед. от центра'
+      : '—';
+    this.el.satDetailAltitude.textContent = Number.isFinite(info.altitude)
+      ? info.altitude.toFixed(2) + ' ед. над поверхностью'
+      : '—';
+    this.el.satDetailPeriod.textContent = Number.isFinite(info.periodSec)
+      ? info.periodSec.toFixed(1) + ' с'
+      : '—';
+    this.el.satDetailResolution.textContent = spec.resolution || '—';
+    this.el.satDetailFov.textContent = spec.fovDeg != null ? '±' + spec.fovDeg + '°' : '—';
+    this.el.satDetailSpeed.textContent = Number.isFinite(info.speed)
+      ? info.speed.toFixed(2) + ' рад/с'
+      : '—';
+    this.el.satDetailNote.textContent = spec.note || '';
+  }
+
   togglePanel(id) {
     const target = document.getElementById(id);
     if (!target) return;
     const willOpen = !target.classList.contains('open');
     for (const panel of this.el.panels) panel.classList.remove('open');
-    if (willOpen) target.classList.add('open');
+    if (willOpen) {
+      target.classList.add('open');
+      if (id === 'panel-satellites') this.showSatList();
+    }
   }
 
   closePanels() {
@@ -290,6 +368,10 @@ export class UI {
 
     this.el.btnBuyRelay.classList.toggle('is-disabled', state.balance < RELAY_COST);
     this.el.btnBuyRelay.textContent = state.balance >= RELAY_COST ? '$' + RELAY_COST + ' — купить' : '$' + RELAY_COST;
+
+    if (this.el.satDetail && !this.el.satDetail.hidden && this._detailId) {
+      this.renderSatDetail(this._detailId);
+    }
   }
 
   renderSatList(state) {
@@ -304,9 +386,10 @@ export class UI {
         '<span class="sat-name">' + sat.name + '<small>' + typeLabel + '</small></span>' +
         '<span class="sat-energy"><i style="width:' + energy + '%"></i></span>' +
         '<span class="sat-pct">' + energy + '%</span>';
+      row.setAttribute('aria-label', 'Открыть параметры: ' + sat.name);
       row.addEventListener('click', () => {
         this.game.select(sat.id);
-        this.closePanels();
+        this.showSatDetail(sat.id);
       });
       this.el.satList.appendChild(row);
     }
