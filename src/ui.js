@@ -147,6 +147,7 @@ export class UI {
       devReset: $('dev-reset'),
       satSheet: $('sat-sheet'),
       satSheetHandle: $('sat-sheet-handle'),
+      btnSatNextFull: $('btn-sat-next-full'),
       satCompact: $('sat-compact'),
       btnSatNext: $('btn-sat-next'),
       btnSatExpand: $('btn-sat-expand'),
@@ -225,6 +226,7 @@ export class UI {
     if (this.el.btnSatSheetClose) this.el.btnSatSheetClose.addEventListener('click', () => this.hideSatSheet());
     if (this.el.btnSatCompactClose) this.el.btnSatCompactClose.addEventListener('click', () => this.hideSatSheet());
     if (this.el.btnSatNext) this.el.btnSatNext.addEventListener('click', () => this.nextSatellite());
+    if (this.el.btnSatNextFull) this.el.btnSatNextFull.addEventListener('click', () => this.nextSatellite(false));
     if (this.el.btnSatExpand) this.el.btnSatExpand.addEventListener('click', () => this.expandSatSheet());
     this.bindSatSheetHandle();
     if (this.el.btnSatInstrument) this.el.btnSatInstrument.addEventListener('click', () => this.showInstrument());
@@ -556,7 +558,7 @@ export class UI {
     this.el.satSheet.classList.remove('collapsed');
   }
 
-  nextSatellite() {
+  nextSatellite(collapsed = true) {
     const satellites = this.game.state.satellites;
     if (!satellites.length) return;
     const current = this._detailId || this.game.state.selectedId;
@@ -568,7 +570,8 @@ export class UI {
       this.el.satSheet.hidden = false;
       this.el.satSheet.classList.remove('orbit-mode');
       this.el.satSheet.classList.add('focus-mode');
-      this.el.satSheet.classList.add('collapsed');
+      this.el.satSheet.classList.toggle('collapsed', collapsed);
+      this.el.satSheet.scrollTop = 0;
     }
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;

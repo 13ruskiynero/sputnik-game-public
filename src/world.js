@@ -346,6 +346,14 @@ function buildSatelliteMesh(type) {
   engine.userData.isEngineNozzle = true;
   group.add(engine);
 
+  const engineThroat = new THREE.Mesh(
+    new THREE.CircleGeometry(0.025, 20),
+    new THREE.MeshBasicMaterial({ color: 0x030406, side: THREE.DoubleSide })
+  );
+  engineThroat.position.z = engineZ + (isRelay ? -0.035 : 0.035);
+  engineThroat.userData.isEngineThroat = true;
+  group.add(engineThroat);
+
   const engineRim = new THREE.Mesh(
     new THREE.TorusGeometry(0.045, 0.0035, 8, 20),
     mats.frame

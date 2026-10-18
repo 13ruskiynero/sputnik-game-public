@@ -804,6 +804,27 @@ html, body {
   cursor: pointer;
 }
 
+.sheet-next {
+  position: absolute;
+  top: 4px;
+  right: 34px;
+  z-index: 5;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(140, 190, 255, 0.07);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sat-sheet.collapsed .sheet-next,
+.sat-sheet.orbit-mode .sheet-next {
+  display: none;
+}
+
 .inline-btn {
   display: flex;
   align-items: center;
@@ -970,6 +991,7 @@ html, body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  padding-right: 64px;
 }
 
 .sat-detail-head h3 {
