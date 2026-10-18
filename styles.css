@@ -945,6 +945,37 @@ html, body {
   cursor: grabbing;
 }
 
+.dev-panel.collapsed {
+  gap: 0;
+  padding: 4px;
+}
+
+.dev-panel.collapsed .dev-label,
+.dev-panel.collapsed .dev-btn {
+  display: none;
+}
+
+.dev-toggle {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(140, 190, 255, 0.08);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.dev-toggle[aria-expanded="true"] {
+  border-color: rgba(89, 242, 178, 0.55);
+  color: var(--accent);
+}
+
 .dev-label {
   margin-right: 2px;
   font-size: 9px;
@@ -977,6 +1008,7 @@ html, body {
 @media (max-width: 620px) {
   .dev-panel { top: 54px; right: 10px; padding: 4px 5px; }
   .dev-btn { width: 48px; height: 34px; font-size: 13px; }
+  .dev-toggle { width: 38px; height: 32px; font-size: 16px; }
   .energy-hud { padding: 6px 10px; gap: 7px; }
   .energy-label { font-size: 10px; }
   .energy-value { font-size: 10px; min-width: 32px; }
@@ -1067,6 +1099,37 @@ html, body {
   cursor: grabbing;
 }
 
+.dev-panel.collapsed {
+  gap: 0;
+  padding: 4px;
+}
+
+.dev-panel.collapsed .dev-label,
+.dev-panel.collapsed .dev-btn {
+  display: none;
+}
+
+.dev-toggle {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(140, 190, 255, 0.08);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.dev-toggle[aria-expanded="true"] {
+  border-color: rgba(89, 242, 178, 0.55);
+  color: var(--accent);
+}
+
 .dev-label {
   margin-right: 2px;
   font-size: 9px;
@@ -1099,6 +1162,7 @@ html, body {
 @media (max-width: 620px) {
   .dev-panel { top: 54px; right: 10px; padding: 4px 5px; }
   .dev-btn { width: 48px; height: 34px; font-size: 13px; }
+  .dev-toggle { width: 38px; height: 32px; font-size: 16px; }
   .energy-hud { padding: 6px 10px; gap: 7px; }
   .energy-label { font-size: 10px; }
   .energy-value { font-size: 10px; min-width: 32px; }

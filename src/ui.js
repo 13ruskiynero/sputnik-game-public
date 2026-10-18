@@ -127,6 +127,7 @@ export class UI {
       relayCardDesc: $('relay-card-desc'),
       shopRealCard: $('shop-real-card'),
       shopThermalCard: $('shop-thermal-card'),
+      devToggle: $('dev-toggle'),
       devMoney50: $('dev-money-50'),
       devMoney500: $('dev-money-500'),
       devReset: $('dev-reset'),
@@ -240,6 +241,9 @@ export class UI {
     if (this.el.devReset) {
       this.el.devReset.addEventListener('click', () => this.resetProgress());
     }
+    if (this.el.devToggle) {
+      this.el.devToggle.addEventListener('click', () => this.toggleDevPanel());
+    }
     if (this.el.devMoney50) {
       this.el.devMoney50.addEventListener('click', () => this.devAddMoney(50));
     }
@@ -268,6 +272,14 @@ export class UI {
   devAddMoney(amount) {
     this.game.addMoney(amount);
     this.toast('DEV: +$' + amount, 'money');
+  }
+
+  toggleDevPanel() {
+    if (!this.el.devPanel) return;
+    const collapsed = this.el.devPanel.classList.toggle('collapsed');
+    this.el.devToggle.setAttribute('aria-expanded', String(!collapsed));
+    this.el.devToggle.title = collapsed ? 'Открыть dev-панель' : 'Свернуть dev-панель';
+    this.el.devToggle.setAttribute('aria-label', this.el.devToggle.title);
   }
 
   openStory() {
