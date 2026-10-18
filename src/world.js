@@ -670,8 +670,11 @@ export function createWorld(canvas, onSelect) {
       observationCone.visible = false;
     }
 
+    // Планета вращается всегда, даже когда палец удерживается или
+    // камера облетает сцену. Пауза останавливает её отдельно.
+    earthSpinGroup.rotation.y -= AUTO_SPIN * dt;
+
     if (!dragging) {
-      earthSpinGroup.rotation.y -= AUTO_SPIN * dt;
       if (Math.abs(spinAzimuth) > 0.0001 || Math.abs(spinPolar) > 0.0001) {
         azimuth += spinAzimuth;
         polar = THREE.MathUtils.clamp(polar + spinPolar, MIN_POLAR, MAX_POLAR);
