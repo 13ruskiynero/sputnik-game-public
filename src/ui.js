@@ -66,7 +66,6 @@ export class UI {
       btnSatSheetClose: $('btn-sat-sheet-close'),
       btnSatInstrument: $('btn-sat-instrument'),
       btnInstrumentBack: $('btn-instrument-back'),
-      btnSatOrbit: $('btn-sat-orbit'),
       orbitEditor: $('orbit-editor'),
       orbitTitle: $('orbit-title'),
       orbitSubtitle: $('orbit-subtitle'),
@@ -126,7 +125,6 @@ export class UI {
     if (this.el.btnSatSheetClose) this.el.btnSatSheetClose.addEventListener('click', () => this.hideSatSheet());
     if (this.el.btnSatInstrument) this.el.btnSatInstrument.addEventListener('click', () => this.showInstrument());
     if (this.el.btnInstrumentBack) this.el.btnInstrumentBack.addEventListener('click', () => this.showSatelliteView());
-    if (this.el.btnSatOrbit) this.el.btnSatOrbit.addEventListener('click', () => this.openOrbitEditor());
     if (this.el.btnOrbitBack) this.el.btnOrbitBack.addEventListener('click', () => this.cancelOrbitEdit());
     if (this.el.btnOrbitCancel) this.el.btnOrbitCancel.addEventListener('click', () => this.cancelOrbitEdit());
     if (this.el.btnOrbitRecommended) this.el.btnOrbitRecommended.addEventListener('click', () => this.resetOrbitToRecommended());
@@ -267,6 +265,7 @@ export class UI {
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
+    if (this.el.satSheet) this.el.satSheet.classList.remove('orbit-mode');
   }
 
   backToSatList() {
@@ -282,6 +281,7 @@ export class UI {
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
+    if (this.el.satSheet) this.el.satSheet.classList.remove('orbit-mode');
     this.el.satSheet.hidden = false;
     this.renderSatDetail(id);
   }
@@ -289,6 +289,7 @@ export class UI {
   showSatelliteView() {
     if (!this._detailId || !this.el.satSheet) return;
     if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
+    if (this.el.satSheet) this.el.satSheet.classList.remove('orbit-mode');
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     this.renderSatDetail(this._detailId);
@@ -386,6 +387,7 @@ export class UI {
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     this.el.orbitEditor.hidden = false;
     this.el.satSheet.hidden = false;
+    if (this.el.satSheet) this.el.satSheet.classList.add('orbit-mode');
     this.world.zoomToOrbit(this.world.getVisualRadius(recommended.altitudeKm));
   }
 
@@ -445,6 +447,7 @@ export class UI {
     this.world.updateSatelliteOrbit(edit.id, edit.draft);
     this._orbitEdit = null;
     if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
+    if (this.el.satSheet) this.el.satSheet.classList.remove('orbit-mode');
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     this.renderSatDetail(edit.id);
@@ -457,6 +460,7 @@ export class UI {
     this.world.updateSatelliteOrbit(edit.id, edit.original);
     this.world.zoomToOrbit(this.world.getVisualRadius(edit.original.altitudeKm));
     if (this.el.orbitEditor) this.el.orbitEditor.hidden = true;
+    if (this.el.satSheet) this.el.satSheet.classList.remove('orbit-mode');
     if (this.el.instrumentDetail) this.el.instrumentDetail.hidden = true;
     if (this.el.satDetail) this.el.satDetail.hidden = false;
     this.renderSatDetail(edit.id);

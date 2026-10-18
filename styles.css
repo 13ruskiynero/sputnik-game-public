@@ -435,6 +435,31 @@ html, body {
   display: none;
 }
 
+.sat-sheet.orbit-mode {
+  background: rgba(5, 10, 20, 0.34);
+  backdrop-filter: blur(3px);
+}
+
+.sat-sheet.orbit-mode .orbit-control {
+  background: rgba(5, 10, 20, 0.62);
+}
+
+.sat-sheet.orbit-mode .orbit-actions .buy-btn,
+.sat-sheet.orbit-mode .back-btn {
+  background-color: rgba(5, 10, 20, 0.62);
+}
+
+.sat-sheet.orbit-mode .panel-note {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(5, 10, 20, 0.55);
+}
+
+.sat-sheet.orbit-mode .sat-detail-head h3,
+.sat-sheet.orbit-mode .sat-detail-subtitle {
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+}
+
 .sheet-close {
   position: absolute;
   top: 4px;
@@ -468,22 +493,6 @@ html, body {
   flex: 0 0 auto;
   color: var(--muted);
   font-size: 14px;
-}
-
-.orbit-open-btn {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 9px;
-  border: 1px solid rgba(89, 242, 178, 0.35);
-  border-radius: 10px;
-  background: rgba(89, 242, 178, 0.08);
-  color: var(--accent);
-  font: inherit;
-  font-size: 11px;
-  white-space: nowrap;
-  cursor: pointer;
 }
 
 .orbit-control {
