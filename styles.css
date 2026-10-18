@@ -928,6 +928,7 @@ html, body {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  width: min(380px, calc(100vw - 28px));
   max-width: min(380px, calc(100vw - 28px));
   padding: 4px 6px;
   border: 1px solid var(--line);
@@ -946,6 +947,7 @@ html, body {
 }
 
 .dev-panel.collapsed {
+  width: auto;
   gap: 0;
   padding: 4px;
 }
@@ -1082,6 +1084,7 @@ html, body {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  width: min(380px, calc(100vw - 28px));
   max-width: min(380px, calc(100vw - 28px));
   padding: 4px 6px;
   border: 1px solid var(--line);
@@ -1100,6 +1103,7 @@ html, body {
 }
 
 .dev-panel.collapsed {
+  width: auto;
   gap: 0;
   padding: 4px;
 }

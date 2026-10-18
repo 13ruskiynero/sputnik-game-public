@@ -100,6 +100,8 @@ export class UI {
     this._storyStage = null;
     this._storyOpen = false;
     this._storyUnread = true;
+    this._suppressDevToggleClick = false;
+    this._keepDevPanelInside = null;
 
     const $ = id => document.getElementById(id);
     this.el = {
@@ -242,7 +244,13 @@ export class UI {
       this.el.devReset.addEventListener('click', () => this.resetProgress());
     }
     if (this.el.devToggle) {
-      this.el.devToggle.addEventListener('click', () => this.toggleDevPanel());
+      this.el.devToggle.addEventListener('click', () => {
+        if (this._suppressDevToggleClick) {
+          this._suppressDevToggleClick = false;
+          return;
+        }
+        this.toggleDevPanel();
+      });
     }
     if (this.el.devMoney50) {
       this.el.devMoney50.addEventListener('click', () => this.devAddMoney(50));
@@ -280,6 +288,9 @@ export class UI {
     this.el.devToggle.setAttribute('aria-expanded', String(!collapsed));
     this.el.devToggle.title = collapsed ? 'Открыть dev-панель' : 'Свернуть dev-панель';
     this.el.devToggle.setAttribute('aria-label', this.el.devToggle.title);
+    if (this._keepDevPanelInside) {
+      requestAnimationFrame(() => this._keepDevPanelInside());
+    }
   }
 
   openStory() {
@@ -308,6 +319,8 @@ export class UI {
   resetProgress() {
     this._storyOpen = false;
     this._storyUnread = true;
+    this._suppressDevToggleClick = false;
+    this._keepDevPanelInside = null;
     this.game.reset();
     this.time.scale = 1;
     this.time.paused = false;
@@ -342,9 +355,11 @@ export class UI {
         panel.style.bottom = 'auto';
       }
     };
+    this._keepDevPanelInside = keepInside;
 
     panel.addEventListener('pointerdown', e => {
-      if (e.target.closest('button')) return;
+      const isToggle = Boolean(e.target.closest('#dev-toggle'));
+      if (!isToggle && e.target.closest('button')) return;
       const rect = panel.getBoundingClientRect();
       drag = {
         id: e.pointerId,
@@ -353,6 +368,7 @@ export class UI {
         left: rect.left,
         top: rect.top,
         moved: false,
+        startToggle: isToggle,
       };
       panel.classList.add('dragging');
       if (panel.setPointerCapture) {
@@ -380,16 +396,25 @@ export class UI {
       e.preventDefault();
     });
 
-    const end = e => {
+    const end = (e, cancelled = false) => {
       if (!drag || (e.pointerId !== undefined && e.pointerId !== drag.id)) return;
+      const wasToggle = drag.startToggle;
+      const moved = drag.moved;
       drag = null;
       panel.classList.remove('dragging');
+      if (!cancelled && wasToggle) {
+        this._suppressDevToggleClick = true;
+        if (!moved) this.toggleDevPanel();
+        setTimeout(() => {
+          this._suppressDevToggleClick = false;
+        }, 250);
+      }
     };
 
-    panel.addEventListener('pointerup', end);
-    panel.addEventListener('pointercancel', end);
-    window.addEventListener('pointerup', end);
-    window.addEventListener('pointercancel', end);
+    panel.addEventListener('pointerup', e => end(e, false));
+    panel.addEventListener('pointercancel', e => end(e, true));
+    window.addEventListener('pointerup', e => end(e, false));
+    window.addEventListener('pointercancel', e => end(e, true));
     window.addEventListener('resize', keepInside);
   }
 
