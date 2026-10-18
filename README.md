@@ -68,6 +68,7 @@ vendor/             локальная копия Three.js
 assets/textures/    текстура Земли
 docs/BRIEF.md       концепция
 docs/STATUS.md      результаты проверки прототипа
+docs/DRAFT_ECONOMY.md  черновик ранней экономики и сюжетных заданий
 tools/sync_public.sh публикация публичного зеркала
 ```
 
