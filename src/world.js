@@ -337,31 +337,38 @@ function buildSatelliteMesh(type) {
   group.add(statusLight);
 
   if (isRelay) {
+    // Параболический отражатель: профиль вращения, открытый вдоль −Z.
+    const dishRadius = 0.20;
+    const dishDepth = 0.07;
+    const dishProfile = [];
+    for (let i = 0; i <= 16; i += 1) {
+      const r = (dishRadius * i) / 16;
+      dishProfile.push(new THREE.Vector2(r, dishDepth * (r / dishRadius) ** 2));
+    }
     const dish = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.LatheGeometry(dishProfile, 32),
       mats.dish
     );
-    // Чаша на торце корпуса: открывается вдоль −Z, к Земле.
-    dish.rotation.x = Math.PI / 2;
-    dish.position.z = -0.30;
+    dish.rotation.x = -Math.PI / 2;
+    dish.position.z = -0.14;
     dish.userData.isRelayDish = true;
     group.add(dish);
+
+    // Фокус параболы: f = R² / (4h). Облучатель стоит в фокусе,
+    // перед зеркалом, а не проходит сквозь его центр.
+    const dishFocusZ = -0.14 - (dishRadius * dishRadius) / (4 * dishDepth);
 
     for (let i = 0; i < 3; i += 1) {
       const angle = (Math.PI * 2 * i) / 3;
       const start = new THREE.Vector3(
-        Math.cos(angle) * 0.065,
-        Math.sin(angle) * 0.065,
-        -0.10
+        Math.cos(angle) * (dishRadius - 0.01),
+        Math.sin(angle) * (dishRadius - 0.01),
+        -0.21
       );
-      const end = new THREE.Vector3(
-        Math.cos(angle) * 0.17,
-        Math.sin(angle) * 0.17,
-        -0.30
-      );
+      const end = new THREE.Vector3(0, 0, dishFocusZ + 0.012);
       const direction = end.clone().sub(start);
       const strut = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.005, 0.005, direction.length(), 6),
+        new THREE.CylinderGeometry(0.004, 0.004, direction.length(), 6),
         mats.frame
       );
       strut.position.copy(start).add(end).multiplyScalar(0.5);
@@ -374,11 +381,11 @@ function buildSatelliteMesh(type) {
     }
 
     const feed = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.012, 0.022, 0.13, 8),
+      new THREE.CylinderGeometry(0.010, 0.020, 0.05, 8),
       mats.gold
     );
     feed.rotation.x = Math.PI / 2;
-    feed.position.set(0, 0, -0.33);
+    feed.position.set(0, 0, dishFocusZ);
     feed.userData.isRelayFeed = true;
     group.add(feed);
   } else {
