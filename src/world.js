@@ -339,9 +339,10 @@ function buildSatelliteMesh(type) {
       new THREE.SphereGeometry(0.18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
       mats.dish
     );
-    // Чаша должна открываться вниз, к Земле: верхняя полусфера без
-    // переворота, вершиной к корпусу.
-    dish.position.y = -0.30;
+    // Чаша на торце корпуса: открывается вдоль −Z, к Земле.
+    dish.rotation.x = Math.PI / 2;
+    dish.position.z = -0.30;
+    dish.userData.isRelayDish = true;
     group.add(dish);
 
     for (let i = 0; i < 3; i += 1) {
@@ -350,7 +351,8 @@ function buildSatelliteMesh(type) {
         new THREE.CylinderGeometry(0.006, 0.006, 0.18, 6),
         mats.frame
       );
-      strut.position.set(Math.cos(angle) * 0.13, -0.21, Math.sin(angle) * 0.13);
+      strut.rotation.x = Math.PI / 2;
+      strut.position.set(Math.cos(angle) * 0.13, Math.sin(angle) * 0.13, -0.21);
       group.add(strut);
     }
 
@@ -358,7 +360,8 @@ function buildSatelliteMesh(type) {
       new THREE.CylinderGeometry(0.012, 0.022, 0.13, 8),
       mats.gold
     );
-    feed.position.y = -0.33;
+    feed.rotation.x = Math.PI / 2;
+    feed.position.z = -0.33;
     group.add(feed);
   } else {
     const lensRing = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.008, 8, 24), mats.frame);
@@ -393,7 +396,7 @@ function buildSatelliteMesh(type) {
   group.scale.setScalar(1.3);
   group.userData.modelType = type;
   group.userData.workingAxis = isRelay
-    ? new THREE.Vector3(0, -1, 0)
+    ? new THREE.Vector3(0, 0, -1)
     : new THREE.Vector3(0, 0, 1);
   return group;
 }

@@ -148,9 +148,6 @@ export class UI {
       satSheet: $('sat-sheet'),
       satSheetHandle: $('sat-sheet-handle'),
       satCompact: $('sat-compact'),
-      satCompactName: $('sat-compact-name'),
-      satCompactFill: $('sat-compact-fill'),
-      satCompactValue: $('sat-compact-value'),
       btnSatNext: $('btn-sat-next'),
       btnSatExpand: $('btn-sat-expand'),
       btnSatCompactClose: $('btn-sat-compact-close'),
@@ -553,7 +550,6 @@ export class UI {
     if (!this.el.satSheet || this.el.satSheet.hidden) return;
     this.el.satSheet.classList.add('collapsed');
     if (this.el.satCompact) this.el.satCompact.hidden = false;
-    this.renderCompact(this.game.state);
     this.el.satSheet.scrollTop = 0;
   }
 
@@ -584,7 +580,6 @@ export class UI {
 
     this.game.select(next.id);
     this.renderSatDetail(next.id);
-    this.renderCompact(this.game.state);
     this.world.focusSatellite(next.id);
   }
 
@@ -1082,19 +1077,6 @@ export class UI {
     this.el.btnBuyRelay.textContent = label;
   }
 
-  renderCompact(state) {
-    if (!this.el.satCompactName) return;
-    const sat = state.satellites.find(item => item.id === this._detailId)
-      || state.satellites.find(item => item.id === state.selectedId)
-      || state.satellites[0]
-      || null;
-    const energy = sat ? Math.round(Math.max(0, Math.min(100, sat.energy))) : 0;
-    this.el.satCompactName.textContent = sat ? sat.name : '—';
-    this.el.satCompactFill.style.width = energy + '%';
-    this.el.satCompactValue.textContent = energy + '%';
-    this.el.satCompactFill.classList.toggle('low', energy < 20);
-  }
-
   render(state) {
     this.el.balance.textContent = formatMoney(state.balance);
     this.el.income.textContent = '+' + '$' + state.incomePerSec.toFixed(2) + '/сек';
@@ -1110,7 +1092,6 @@ export class UI {
       this.el.energySatName.title = sat ? sat.name : '';
     }
     this.el.energyFill.classList.toggle('low', energyPct < 20);
-    this.renderCompact(state);
     const nextTarget = sat ? this.nextContractTarget(sat.id) : null;
     const angle = nextTarget ? nextTarget.angle : null;
     const overZone = angle !== null && angle <= CONTRACT_ANGLE;

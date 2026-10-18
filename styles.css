@@ -682,49 +682,33 @@ html, body {
   display: none;
 }
 
-.sat-compact-main {
+.compact-expand {
   display: flex;
   flex: 1;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(140, 190, 255, 0.07);
+  color: var(--muted);
+  cursor: pointer;
 }
 
-.sat-compact-name {
-  max-width: 38%;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sat-compact-bar {
-  flex: 1;
-  height: 6px;
+.compact-grip {
+  width: 52px;
+  height: 3px;
   border-radius: 999px;
-  background: rgba(140, 190, 255, 0.14);
-  overflow: hidden;
+  background: var(--muted);
+  opacity: 0.7;
 }
 
-.sat-compact-bar i {
-  display: block;
-  width: 0%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #ffcf6e, #59f2b2);
-}
-
-.sat-compact-bar i.low {
-  background: linear-gradient(90deg, #ff7d7d, #ffcf6e);
-}
-
-.sat-compact-value {
-  min-width: 34px;
-  color: var(--text);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+.compact-arrow {
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1;
 }
 
 .compact-btn {
@@ -1184,7 +1168,8 @@ html, body {
   }
   .sat-sheet.collapsed { height: 58px; max-height: 58px; padding: 7px 9px; }
   .sat-compact { gap: 6px; }
-  .sat-compact-name { max-width: 32%; font-size: 10px; }
+  .compact-expand { height: 28px; padding: 0 8px; }
+  .compact-grip { width: 42px; }
   .compact-btn { width: 28px; height: 28px; font-size: 14px; }
   .sat-detail-facts { gap: 6px; }
   .sat-detail-facts div { padding: 7px 8px; }
@@ -1344,7 +1329,8 @@ html, body {
   }
   .sat-sheet.collapsed { height: 58px; max-height: 58px; padding: 7px 9px; }
   .sat-compact { gap: 6px; }
-  .sat-compact-name { max-width: 32%; font-size: 10px; }
+  .compact-expand { height: 28px; padding: 0 8px; }
+  .compact-grip { width: 42px; }
   .compact-btn { width: 28px; height: 28px; font-size: 14px; }
   .sat-detail-facts { gap: 6px; }
   .sat-detail-facts div { padding: 7px 8px; }
