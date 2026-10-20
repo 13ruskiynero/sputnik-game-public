@@ -1109,6 +1109,25 @@ html, body {
 .buy-btn:disabled { opacity: 0.4; cursor: default; }
 
 .menu-body p { margin: 0 0 10px; font-size: 13px; line-height: 1.45; }
+
+.menu-btn {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 13px;
+  border: 1px solid rgba(89, 242, 178, 0.35);
+  border-radius: 12px;
+  background: rgba(89, 242, 178, 0.08);
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.menu-btn[aria-pressed="false"] {
+  border-color: var(--line);
+  background: rgba(140, 190, 255, 0.06);
+  color: var(--muted);
+}
 .muted { color: var(--muted); }
 
 .danger {

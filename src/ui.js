@@ -208,6 +208,8 @@ export class UI {
       actionHint: $('action-hint'),
       btnBuyRelay: $('btn-buy-relay'),
       btnReset: $('btn-reset'),
+      btnMusic: $('btn-music'),
+      music: $('music'),
       devSpeed2: $('dev-speed-2'),
       devSpeed5: $('dev-speed-5'),
       devPause: $('dev-pause'),
@@ -266,6 +268,7 @@ export class UI {
     this.el.btnAction.addEventListener('click', () => this.onAction());
     this.el.btnBuyRelay.addEventListener('click', () => this.onBuyRelay());
     this.el.btnReset.addEventListener('click', () => this.resetProgress());
+    this.bindMusic();
     if (this.el.devReset) {
       this.el.devReset.addEventListener('click', () => this.resetProgress());
     }
@@ -357,6 +360,43 @@ export class UI {
     this.updateDevButtons();
     this.updateStoryVisibility();
     this.toast('Прогресс сброшен', 'warn');
+  }
+
+  bindMusic() {
+    if (!this.el.music) return;
+    this.musicOn = true;
+    this.el.music.loop = true;
+    if (this.el.btnMusic) {
+      this.el.btnMusic.addEventListener('click', () => this.toggleMusic());
+    }
+    const startOnFirstInteraction = e => {
+      if (e.target && e.target.closest && e.target.closest('#btn-music')) return;
+      this.startMusic();
+    };
+    window.addEventListener('pointerdown', startOnFirstInteraction, { once: true });
+    window.addEventListener('keydown', startOnFirstInteraction, { once: true });
+    this.updateMusicButton();
+  }
+
+  startMusic() {
+    if (!this.el.music || !this.musicOn) return;
+    this.el.music.volume = 0.45;
+    const promise = this.el.music.play();
+    if (promise && promise.catch) promise.catch(() => {});
+  }
+
+  toggleMusic() {
+    if (!this.el.music) return;
+    this.musicOn = !this.musicOn;
+    if (this.musicOn) this.startMusic();
+    else this.el.music.pause();
+    this.updateMusicButton();
+  }
+
+  updateMusicButton() {
+    if (!this.el.btnMusic) return;
+    this.el.btnMusic.textContent = this.musicOn ? 'Музыка: вкл' : 'Музыка: выкл';
+    this.el.btnMusic.setAttribute('aria-pressed', String(Boolean(this.musicOn)));
   }
 
   bindDevSpeed(button, scale) {

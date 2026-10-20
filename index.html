@@ -179,6 +179,7 @@
     <div class="menu-body">
       <p>Sputnik Game — прототип 0.1</p>
       <p class="muted">Вращайте Землю мышью или пальцем. Подведите спутник к зелёной зоне контракта и нажмите «Действие».</p>
+      <button id="btn-music" class="menu-btn" type="button" aria-pressed="true">Музыка: вкл</button>
       <button id="btn-reset" class="danger" type="button">Сбросить прогресс</button>
     </div>
   </section>
@@ -327,6 +328,8 @@
   </div>
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <audio id="music" src="./assets/audio/tududu_remix.mp3" loop preload="auto"></audio>
 
   <script type="module" src="./src/main.js"></script>
 </body>
