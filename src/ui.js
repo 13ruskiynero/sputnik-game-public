@@ -365,7 +365,9 @@ export class UI {
   bindMusic() {
     if (!this.el.music) return;
     this.musicOn = true;
+    this.musicUnlocked = false;
     this.el.music.loop = true;
+    this.el.music.muted = false;
     if (this.el.btnMusic) {
       this.el.btnMusic.addEventListener('click', () => this.toggleMusic());
     }
@@ -373,23 +375,41 @@ export class UI {
       if (e.target && e.target.closest && e.target.closest('#btn-music')) return;
       this.startMusic();
     };
-    window.addEventListener('pointerdown', startOnFirstInteraction, { once: true });
-    window.addEventListener('keydown', startOnFirstInteraction, { once: true });
+    for (const eventName of ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown']) {
+      document.addEventListener(eventName, startOnFirstInteraction, {
+        capture: true,
+        passive: eventName === 'touchstart' || eventName === 'touchend',
+      });
+    }
     this.updateMusicButton();
   }
 
   startMusic() {
     if (!this.el.music || !this.musicOn) return;
-    this.el.music.volume = 0.45;
+    if (!this.el.music.paused) {
+      this.musicUnlocked = true;
+      this.updateMusicButton();
+      return;
+    }
+    this.el.music.volume = 0.6;
     const promise = this.el.music.play();
-    if (promise && promise.catch) promise.catch(() => {});
+    if (promise && promise.then) {
+      promise.then(() => {
+        this.musicUnlocked = true;
+        this.updateMusicButton();
+      }).catch(() => {});
+    }
   }
 
   toggleMusic() {
     if (!this.el.music) return;
-    this.musicOn = !this.musicOn;
-    if (this.musicOn) this.startMusic();
-    else this.el.music.pause();
+    if (this.el.music.paused) {
+      this.musicOn = true;
+      this.startMusic();
+    } else {
+      this.musicOn = false;
+      this.el.music.pause();
+    }
     this.updateMusicButton();
   }
 
@@ -957,6 +977,7 @@ export class UI {
   }
 
   onAction() {
+    this.startMusic();
     const sat = this.game.selectedSatellite();
     const target = sat ? this.nextContractTarget(sat.id) : null;
     const result = this.game.doAction(target ? target.angle : null, target ? target.id : null);
